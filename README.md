@@ -6,7 +6,7 @@ Open the system menu, click the Remmina tile, pick a saved connection. The list
 is read from Remmina's own profile directory and follows it as it changes, so a
 connection saved in Remmina shows up here without a reload.
 
-**[Documentation →](https://begibson.com/quickrem/)** — profiles, launching,
+**[Documentation →](https://ghost-assembly.github.io/quickrem/)** — profiles, launching,
 secrets, architecture, testing, packaging and releasing.
 
 ## What it does
@@ -35,7 +35,7 @@ Needs GNOME 49 or newer, and Remmina. From the latest release, with no clone and
 no toolchain — `gnome-extensions` ships with GNOME Shell itself:
 
 ```
-curl -LO 'https://github.com/napalm255/quickrem/releases/latest/download/quickrem@napalm255.github.io.shell-extension.zip'
+curl -LO 'https://github.com/Ghost-Assembly/quickrem/releases/latest/download/quickrem@napalm255.github.io.shell-extension.zip'
 gnome-extensions install --force 'quickrem@napalm255.github.io.shell-extension.zip'
 ```
 
