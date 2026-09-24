@@ -143,26 +143,26 @@ export function reset() {
 
 /**
  * @param {object|null} cancellable Cancellable to check.
- * @throws {GioError} CANCELLED when it has been cancelled.
+ * @throws {GioError} CANCELLED when it has been canceled.
  */
-function throwIfCancelled(cancellable) {
+function throwIfCanceled(cancellable) {
     if (cancellable?.is_cancelled())
         throw new GioError(IOErrorEnum.CANCELLED, 'Operation was cancelled');
 }
 
 class Cancellable {
     constructor() {
-        this._cancelled = false;
+        this._canceled = false;
     }
 
     /** Cancel any operation holding this. */
     cancel() {
-        this._cancelled = true;
+        this._canceled = true;
     }
 
     /** @returns {boolean} Whether cancel() has been called. */
     is_cancelled() {
-        return this._cancelled;
+        return this._canceled;
     }
 }
 
@@ -205,11 +205,11 @@ class FileEnumerator {
     /**
      * @param {number} count How many to return at most.
      * @param {number} _priority Ignored.
-     * @param {object|null} cancellable Cancelled when superseded.
+     * @param {object|null} cancellable Canceled when superseded.
      * @returns {Promise<Array<FileInfo>>} The next batch, empty when done.
      */
     async next_files_async(count, _priority, cancellable) {
-        throwIfCancelled(cancellable);
+        throwIfCanceled(cancellable);
 
         return this._paths.splice(0, count).map(path => {
             const name = path.slice(path.lastIndexOf('/') + 1);
@@ -293,11 +293,11 @@ class GioFile {
      * @param {string} _attributes Ignored.
      * @param {number} _flags Ignored.
      * @param {number} _priority Ignored.
-     * @param {object|null} cancellable Cancelled when superseded.
+     * @param {object|null} cancellable Canceled when superseded.
      * @returns {Promise<FileEnumerator>} An enumerator over the children.
      */
     async enumerate_children_async(_attributes, _flags, _priority, cancellable) {
-        throwIfCancelled(cancellable);
+        throwIfCanceled(cancellable);
 
         const entry = fs.entries.get(this.path);
         if (!entry || entry.type !== 'dir')
@@ -330,11 +330,11 @@ class GioFile {
      * Matches the real promisified signature, which resolves to
      * [contents, etag] — the boolean the synchronous call returns is dropped.
      *
-     * @param {object|null} cancellable Cancelled when superseded.
+     * @param {object|null} cancellable Canceled when superseded.
      * @returns {Promise<[Uint8Array, string]>} Contents and etag.
      */
     async load_contents_async(cancellable) {
-        throwIfCancelled(cancellable);
+        throwIfCanceled(cancellable);
 
         if (fs.unreadable.has(this.path))
             throw new GioError(IOErrorEnum.PERMISSION_DENIED, `${this.path} denied`);

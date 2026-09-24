@@ -49,9 +49,9 @@ describe('parseProfile', () => {
 
         // Not "the menu ignores them" — they must not be in the object at all,
         // so a later code path cannot find one to leak.
-        const serialised = JSON.stringify(profile);
+        const serialized = JSON.stringify(profile);
         for (const secret of ['Zm9vYmFyPT0=', 'c2VjcmV0', 'dG9wc2VjcmV0', 'aGlkZGVu'])
-            expect(serialised).not.toContain(secret);
+            expect(serialized).not.toContain(secret);
 
         expect(Object.keys(profile).sort()).toEqual([
             'group',
@@ -82,7 +82,7 @@ describe('parseProfile', () => {
         expect(profile.server).toBe('host?opt=1&other=2');
     });
 
-    it('normalises the protocol and trims whitespace', () => {
+    it('normalizes the protocol and trims whitespace', () => {
         const profile = parseProfile(
             '[remmina]\n  name  =  Spaced  \nprotocol=rdp\n',
             PATH,

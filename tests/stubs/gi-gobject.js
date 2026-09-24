@@ -5,7 +5,7 @@
 // ParamSpec for registerClass to accept the property block.
 
 /**
- * The signal behaviour store.js relies on. `connectObject` and
+ * The signal behavior store.js relies on. `connectObject` and
  * `disconnectObject` are gnome-shell's additions, not GObject's, but they are
  * on every GObject inside the Shell and are the whole point of the teardown
  * this stub exists to test.

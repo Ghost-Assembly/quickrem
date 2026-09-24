@@ -7,7 +7,7 @@
             <summary>Profile directory</summary>
             <description>
                 Directory to read .remmina profiles from. Leave empty to detect it
-                from the installed Remmina, which honours datadir_path in
+                from the installed Remmina, which honors datadir_path in
                 remmina.pref and falls back to the Flatpak or native data
                 directory.
             </description>

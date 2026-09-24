@@ -30,7 +30,7 @@ describe('directory helpers', () => {
         );
     });
 
-    it('honours XDG_DATA_HOME and falls back to .local/share', () => {
+    it('honors XDG_DATA_HOME and falls back to .local/share', () => {
         expect(nativeDataDir({ home: HOME })).toBe(`${HOME}/.local/share/remmina`);
         expect(nativeDataDir({ home: HOME, xdgDataHome: '/xdg/data' })).toBe(
             '/xdg/data/remmina',

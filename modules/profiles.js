@@ -70,7 +70,7 @@ function unescapeValue(value) {
  * The profile name to fall back on when the file has no usable `name=`.
  *
  * Remmina's own default filename template is `%G_%P_%N_%h.remmina`, so the stem
- * is at worst a recognisable description of the connection.
+ * is at worst a recognizable description of the connection.
  *
  * @param {string} path Absolute path to the .remmina file.
  * @returns {string} The filename with its directory and .remmina suffix removed.

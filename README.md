@@ -22,7 +22,7 @@ secrets, architecture, testing, packaging and releasing.
   `application/x-remmina` — Remmina's own connect action. That works the same
   for a Flatpak and a distribution package, reuses an already-running Remmina,
   and lets the portal map the path into the Flatpak sandbox.
-- Finds the profile directory on its own, honouring `datadir_path` in
+- Finds the profile directory on its own, honoring `datadir_path` in
   `remmina.pref`, and falls back to the Flatpak or native data directory.
 
 It never reads Remmina's stored passwords. `password`, `ssh_passphrase` and the
@@ -169,8 +169,8 @@ git push origin v0.1.0
 ```
 
 CI checks the tag against both files before it builds anything, so a tag that
-disagrees with the tree fails instead of shipping a mislabelled zip.
+disagrees with the tree fails instead of shipping a mislabeled zip.
 
-## Licence
+## License
 
 GPL-3.0-or-later.

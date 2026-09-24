@@ -312,7 +312,7 @@ export const ProfileStore = GObject.registerClass(
          *
          * @param {Gio.FileEnumerator} enumerator An open enumerator.
          * @param {string} dir The directory it is enumerating.
-         * @param {Gio.Cancellable} cancellable Cancelled when superseded.
+         * @param {Gio.Cancellable} cancellable Canceled when superseded.
          * @returns {Promise<Array<string>>} Absolute paths to profiles.
          */
         async _collectPaths(enumerator, dir, cancellable) {
@@ -364,7 +364,7 @@ export const ProfileStore = GObject.registerClass(
 
         /**
          * @param {string} path Profile to read.
-         * @param {Gio.Cancellable} cancellable Cancelled when superseded.
+         * @param {Gio.Cancellable} cancellable Canceled when superseded.
          * @returns {Promise<object|null>} The parsed profile, or null when it
          *   could not be read.
          */
@@ -386,7 +386,7 @@ export const ProfileStore = GObject.registerClass(
 
         /**
          * @param {string} dir Directory to read.
-         * @param {Gio.Cancellable} cancellable Cancelled when superseded.
+         * @param {Gio.Cancellable} cancellable Canceled when superseded.
          * @returns {Promise<Array<object>>} Parsed profiles, unsorted.
          */
         async _scan(dir, cancellable) {
