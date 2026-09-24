@@ -143,7 +143,7 @@ export function reset() {
 
 /**
  * @param {object|null} cancellable Cancellable to check.
- * @throws {GioError} CANCELLED when it has been cancelled.
+ * @throws {GioError} CANCELLED when it has been canceled.
  */
 function throwIfCancelled(cancellable) {
     if (cancellable?.is_cancelled())
@@ -205,7 +205,7 @@ class FileEnumerator {
     /**
      * @param {number} count How many to return at most.
      * @param {number} _priority Ignored.
-     * @param {object|null} cancellable Cancelled when superseded.
+     * @param {object|null} cancellable Canceled when superseded.
      * @returns {Promise<Array<FileInfo>>} The next batch, empty when done.
      */
     async next_files_async(count, _priority, cancellable) {
@@ -293,7 +293,7 @@ class GioFile {
      * @param {string} _attributes Ignored.
      * @param {number} _flags Ignored.
      * @param {number} _priority Ignored.
-     * @param {object|null} cancellable Cancelled when superseded.
+     * @param {object|null} cancellable Canceled when superseded.
      * @returns {Promise<FileEnumerator>} An enumerator over the children.
      */
     async enumerate_children_async(_attributes, _flags, _priority, cancellable) {
@@ -330,7 +330,7 @@ class GioFile {
      * Matches the real promisified signature, which resolves to
      * [contents, etag] — the boolean the synchronous call returns is dropped.
      *
-     * @param {object|null} cancellable Cancelled when superseded.
+     * @param {object|null} cancellable Canceled when superseded.
      * @returns {Promise<[Uint8Array, string]>} Contents and etag.
      */
     async load_contents_async(cancellable) {

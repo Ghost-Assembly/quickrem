@@ -107,7 +107,7 @@ export function launchProfile(profile, settings) {
 export function launchRemmina(settings) {
     launchWith(settings, null, 'start Remmina', () => {
         // Shell.AppSystem rather than Gio.DesktopAppInfo, which GJS has
-        // deprecated in favour of a platform-specific library. Shell.App also
+        // deprecated in favor of a platform-specific library. Shell.App also
         // brings its own launch context, so the window lands on the current
         // workspace and gets a startup notification without one being built.
         const app = Shell.AppSystem.get_default().lookup_app(DESKTOP_ID);

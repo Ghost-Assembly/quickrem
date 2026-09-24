@@ -82,7 +82,7 @@ describe('parseProfile', () => {
         expect(profile.server).toBe('host?opt=1&other=2');
     });
 
-    it('normalises the protocol and trims whitespace', () => {
+    it('normalizes the protocol and trims whitespace', () => {
         const profile = parseProfile(
             '[remmina]\n  name  =  Spaced  \nprotocol=rdp\n',
             PATH,

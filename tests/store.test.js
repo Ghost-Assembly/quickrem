@@ -70,7 +70,7 @@ describe('finding the directory', () => {
         expect(store.source).toBe('native');
     });
 
-    it('honours datadir_path from remmina.pref', async () => {
+    it('honors datadir_path from remmina.pref', async () => {
         fs.mkdir(FLATPAK_DATA);
         fs.write(
             `${FLATPAK_CONFIG}/remmina.pref`,
@@ -232,7 +232,7 @@ describe('watching', () => {
         writeProfile('a.remmina', { name: 'First' });
         const store = await newStore();
 
-        // Two rescans in flight at once. The older one is cancelled by the
+        // Two rescans in flight at once. The older one is canceled by the
         // newer, so what lands is the newer directory state.
         fs.remove(`${FLATPAK_DATA}/a.remmina`);
         const stale = store._refresh();
@@ -251,7 +251,7 @@ describe('watching', () => {
         const store = await newStore();
         expect(store.profiles.map(p => p.name)).toEqual(['Published']);
 
-        // Cancelling covers a scan that is still reading. It cannot cover the
+        // Canceling covers a scan that is still reading. It cannot cover the
         // window between the last read resolving and the result being
         // published, which is what the generation counter is for: bump it the
         // way a newer refresh would and the older result must be thrown away.

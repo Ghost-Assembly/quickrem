@@ -13,7 +13,7 @@ Report privately through GitHub's
 rather than opening a public issue.
 
 Please include the Shell version, the extension version from `metadata.json`,
-and the steps to reproduce. You should get an acknowledgement within a week.
+and the steps to reproduce. You should get an acknowledgment within a week.
 
 ## Scope
 
