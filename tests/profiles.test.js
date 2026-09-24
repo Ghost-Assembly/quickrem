@@ -49,9 +49,9 @@ describe('parseProfile', () => {
 
         // Not "the menu ignores them" — they must not be in the object at all,
         // so a later code path cannot find one to leak.
-        const serialised = JSON.stringify(profile);
+        const serialized = JSON.stringify(profile);
         for (const secret of ['Zm9vYmFyPT0=', 'c2VjcmV0', 'dG9wc2VjcmV0', 'aGlkZGVu'])
-            expect(serialised).not.toContain(secret);
+            expect(serialized).not.toContain(secret);
 
         expect(Object.keys(profile).sort()).toEqual([
             'group',
