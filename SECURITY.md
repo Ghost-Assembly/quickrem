@@ -9,7 +9,7 @@ process, so it is only ever supported on the Shell versions named in
 ## Reporting a vulnerability
 
 Report privately through GitHub's
-[security advisory form](https://github.com/napalm255/quickrem/security/advisories/new)
+[security advisory form](https://github.com/Ghost-Assembly/quickrem/security/advisories/new)
 rather than opening a public issue.
 
 Please include the Shell version, the extension version from `metadata.json`,
