@@ -1,38 +1,86 @@
 /*
- * QuickRem documentation.
+ * The Ghost Assembly docs template, shared by every quick* docs site.
  *
- * Hand-written, no framework and no build step. There is deliberately no
- * JavaScript on the page, so everything here has to work from CSS alone: the
- * theme follows the reader's system setting rather than a toggle, and the
- * navigation is plain anchors.
+ * Hand-written, no framework, no build step and no JavaScript: the theme
+ * follows the reader's color scheme and navigation is plain anchors. The same
+ * stylesheet serves every quick* docs site; only index.html changes.
+ *
+ * Rules, from the Ghost Assembly org site:
+ *   - Brand stops are sampled from the logo: cyan, blue, magenta.
+ *   - The spectrum is decoration only (halo, rules, button ring, card tops).
+ *     Never under text.
+ *   - .night (top bar, hero, code, footer) keeps the dark tokens in both
+ *     schemes: the emblem, the product drawing and code read on black.
+ *   - Orbitron for display, the system stack for reading, monospace for code.
+ *   - Motion only under prefers-reduced-motion: no-preference.
  */
 
-:root {
-    --ink: #1b1b1f;
-    --ink-soft: #55555f;
-    --paper: #fdfdfc;
-    --raised: #f3f3f0;
-    --line: #dededa;
-    --accent: #7a3fb8;
-    --accent-soft: #f0e8f8;
-    --code-ink: #4a2472;
-
-    --measure: 46rem;
-    --sans: system-ui, -apple-system, 'Segoe UI', Cantarell, 'Noto Sans', sans-serif;
-    --mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+@font-face {
+    font-family: 'Orbitron';
+    font-style: normal;
+    font-weight: 500 800;
+    font-display: swap;
+    src: url('assets/fonts/orbitron-latin.woff2') format('woff2');
 }
 
-@media (prefers-color-scheme: dark) {
+:root {
+    --cyan: #00a8fc;
+    --blue: #2f5afc;
+    --magenta: #d601fc;
+    --spectrum: linear-gradient(135deg, var(--cyan), var(--blue) 55%, var(--magenta));
+    --spectrum-x: linear-gradient(90deg, var(--cyan), var(--blue) 55%, var(--magenta));
+    --spectrum-y: linear-gradient(180deg, var(--cyan), var(--blue) 55%, var(--magenta));
+
+    --paper: #03030a;
+    --raised: #0a0b16;
+    --sunken: #06060e;
+    --ink: #eceef2;
+    --mist: #9aa3b5;
+    --line: #25263d;
+    --link: #35b6ff;
+    --note: #0b1330;
+
+    --display: 'Orbitron', system-ui, sans-serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', Cantarell, 'Noto Sans', sans-serif;
+    --mono:
+        ui-monospace, 'JetBrains Mono', 'Cascadia Mono', 'Source Code Pro', Menlo,
+        monospace;
+
+    --radius: 14px;
+    /* Side padding: 96px on a 1440px screen, centering a 1248px column beyond
+     * it, and never less than 24px. */
+    --gutter: max(24px, min(96px, 6.5vw), calc((100vw - 1248px) / 2));
+
+    color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
     :root {
-        --ink: #e6e6e9;
-        --ink-soft: #a6a6b0;
-        --paper: #16161a;
-        --raised: #1f1f25;
-        --line: #32323a;
-        --accent: #c9a2f0;
-        --accent-soft: #2a2035;
-        --code-ink: #dcc0f7;
+        --paper: #f3f4f8;
+        --raised: #ffffff;
+        --sunken: #e9ebf2;
+        --ink: #12131c;
+        --mist: #4a5063;
+        --line: #d4d7e3;
+        --link: #2446d6;
+        --note: #e6ebff;
+
+        color-scheme: light;
     }
+}
+
+.night {
+    --paper: #03030a;
+    --raised: #0a0b16;
+    --sunken: #06060e;
+    --ink: #eceef2;
+    --mist: #9aa3b5;
+    --line: #25263d;
+    --link: #35b6ff;
+
+    background: var(--paper);
+    color: var(--ink);
+    color-scheme: dark;
 }
 
 *,
@@ -41,226 +89,1292 @@
     box-sizing: border-box;
 }
 
-html {
-    scroll-behavior: smooth;
-    /* Anchored headings would otherwise land flush against the top edge. */
-    scroll-padding-top: 1.5rem;
-}
-
-@media (prefers-reduced-motion: reduce) {
+@media (prefers-reduced-motion: no-preference) {
     html {
-        scroll-behavior: auto;
+        scroll-behavior: smooth;
     }
 }
 
 body {
     margin: 0;
-    padding: 0 1.25rem 5rem;
     background: var(--paper);
     color: var(--ink);
     font-family: var(--sans);
-    font-size: 1.02rem;
-    line-height: 1.65;
-    /* -webkit- prefix included: Safari still ships it unprefixed only behind a flag. */
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
 }
 
-/* Keyboard users get to skip the contents list. Visible only when focused. */
-.skip {
-    position: absolute;
-    left: -9999px;
-    top: 0;
-    background: var(--accent);
-    color: var(--paper);
-    padding: 0.6rem 1rem;
-    border-radius: 0 0 6px 0;
-    z-index: 10;
-}
-
-.skip:focus {
-    left: 0;
-}
-
-header,
-main,
-footer {
-    max-width: var(--measure);
-    margin-inline: auto;
-}
-
-header {
-    padding: 3.5rem 0 1rem;
-    border-bottom: 1px solid var(--line);
-}
-
-h1 {
-    margin: 0;
-    font-size: 2.6rem;
-    letter-spacing: -0.02em;
-}
-
-.tagline {
-    margin: 0.4rem 0 0;
-    font-size: 1.15rem;
-    color: var(--ink-soft);
-}
-
-.repo-link {
-    display: inline-block;
-    margin-top: 1.25rem;
-    font-size: 0.95rem;
-}
-
-h2 {
-    margin: 3.25rem 0 0.75rem;
-    font-size: 1.5rem;
-    letter-spacing: -0.01em;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--line);
-}
-
-h3 {
-    margin: 2rem 0 0.5rem;
-    font-size: 1.12rem;
-}
-
-p,
-ul,
-ol {
-    margin: 0.85rem 0;
-}
-
-li + li {
-    margin-top: 0.3rem;
+img {
+    max-width: 100%;
+    height: auto;
 }
 
 a {
-    color: var(--accent);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 2px;
+    color: var(--link);
+    text-underline-offset: 0.2em;
 }
 
 a:hover {
     text-decoration-thickness: 2px;
 }
 
-/* Never rely on color alone: focus gets a real outline. */
-a:focus-visible,
-.skip:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-    border-radius: 2px;
-}
-
-code {
-    font-family: var(--mono);
-    font-size: 0.9em;
-    background: var(--raised);
-    color: var(--code-ink);
-    padding: 0.12em 0.35em;
+:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 3px;
     border-radius: 4px;
 }
 
-pre {
-    background: var(--raised);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 0.9rem 1rem;
-    overflow-x: auto;
-    line-height: 1.5;
+svg {
+    flex: none;
 }
 
-pre code {
-    background: none;
-    color: inherit;
-    padding: 0;
-    font-size: 0.88rem;
+/* Keyboard users get to skip the header. Visible only when focused. */
+.skip {
+    position: absolute;
+    inset-inline-start: -9999px;
+    inset-block-start: 0;
+    z-index: 10;
+    padding: 0.6rem 1rem;
+    background: var(--ink);
+    color: var(--paper);
 }
 
-/* Wide tables scroll inside their own box so the page never does. */
-.scroll {
-    overflow-x: auto;
-    margin: 1.1rem 0;
-    border: 1px solid var(--line);
-    border-radius: 8px;
+.skip:focus {
+    inset-inline-start: 0;
 }
 
-table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 0.94rem;
+/* ---- Top bar ------------------------------------------------------------ */
+
+.bar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    height: 64px;
+    padding-inline: max(24px, var(--gutter) - 48px);
+    border-block-end: 1px solid var(--line);
 }
 
-th,
-td {
-    text-align: left;
-    padding: 0.55rem 0.85rem;
-    border-bottom: 1px solid var(--line);
-    vertical-align: top;
+.crumb {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    color: var(--ink);
+    text-decoration: none;
 }
 
-th {
-    background: var(--raised);
+.crumb img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.crumb .org {
+    font-family: var(--display);
+    font-size: 12px;
     font-weight: 600;
-    white-space: nowrap;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mist);
 }
 
-tbody tr:last-child td {
-    border-bottom: none;
+.crumb .sep {
+    color: var(--mist);
 }
 
-kbd {
-    font-family: var(--sans);
-    font-size: 0.82em;
+.crumb .product {
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.bar nav {
+    margin-inline-start: auto;
+}
+
+.bar ul {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.bar nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding-inline: 14px;
+    border-radius: 999px;
+    color: var(--mist);
+    font-size: 15px;
+    text-decoration: none;
+}
+
+.bar nav a:hover,
+.bar nav a[aria-current] {
+    color: var(--ink);
     background: var(--raised);
+}
+
+.version {
+    padding: 4px 10px;
     border: 1px solid var(--line);
-    border-bottom-width: 2px;
-    border-radius: 5px;
-    padding: 0.1em 0.42em;
+    border-radius: 999px;
+    color: var(--mist);
+    font-family: var(--mono);
+    font-size: 12px;
+}
+
+/* ---- Hero --------------------------------------------------------------- */
+
+.hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 500px;
+    align-items: center;
+    gap: 72px;
+    padding: 88px var(--gutter) 104px;
+    overflow: hidden;
+}
+
+.halo {
+    position: absolute;
+    inset-block-start: -120px;
+    inset-inline-end: -160px;
+    width: 940px;
+    height: 820px;
+    pointer-events: none;
+    background:
+        radial-gradient(closest-side at 38% 52%, rgb(0 168 252 / 0.3), transparent),
+        radial-gradient(closest-side at 66% 44%, rgb(214 1 252 / 0.26), transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .halo {
+        animation: breathe 9s ease-in-out infinite alternate;
+    }
+}
+
+@keyframes breathe {
+    from {
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1.06);
+    }
+}
+
+.hero > :not(.halo) {
+    position: relative;
+}
+
+.eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 22px;
+    color: var(--mist);
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.eyebrow::before {
+    content: '';
+    width: 32px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--spectrum-x);
+}
+
+.hero h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 84px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.01em;
+}
+
+.tagline {
+    max-width: 24ch;
+    margin: 28px 0 0;
+    font-size: 26px;
+    line-height: 1.3;
+}
+
+.lede {
+    max-width: 52ch;
+    margin: 20px 0 0;
+    color: var(--mist);
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 28px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.chip {
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--raised);
+    color: var(--mist);
+    font-family: var(--mono);
+    font-size: 13px;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 32px 0 0;
+}
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding-inline: 26px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.button:hover {
+    border-color: var(--mist);
+}
+
+/* The ring is the spectrum; the label sits on paper, never on the gradient. */
+.button.primary {
+    border: 2px solid transparent;
+    background:
+        linear-gradient(var(--paper), var(--paper)) padding-box,
+        var(--spectrum) border-box;
+    box-shadow: 0 0 32px rgb(47 90 252 / 0.35);
+}
+
+.button.primary:hover {
+    box-shadow:
+        0 0 40px rgb(47 90 252 / 0.5),
+        0 0 12px rgb(214 1 252 / 0.3);
+}
+
+/* ---- The product drawing ------------------------------------------------ */
+
+/* QuickMusic in GNOME's own style. Each project draws its own here, or puts a
+ * screenshot in its place. Colors are GNOME's, not the theme's. */
+
+.shot {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 14px;
+    width: 100%;
+    margin: 0;
+    color: #ffffff;
+    font-family: Cantarell, 'Adwaita Sans', var(--sans);
+}
+
+.gtop {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 38px;
+    padding-inline: 10px;
+    border: 1px solid #1d1e2c;
+    border-radius: 12px;
+    background: #000000;
+    font-size: 13.5px;
+    font-weight: 700;
     white-space: nowrap;
+}
+
+.gtop .ws {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #2a2a2e;
+}
+
+.gtop .ws i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #8a8a90;
+}
+
+.gtop .ws i:first-child {
+    width: 22px;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+.gtop .clock {
+    flex: 1;
+    text-align: center;
+}
+
+.gtop .qm,
+.gtop .sys {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding-inline: 10px;
+    border-radius: 999px;
+    background: #2a2a2e;
+}
+
+.gtop .qm {
+    min-width: 0;
+    overflow: hidden;
+    box-shadow:
+        0 0 0 1.5px var(--cyan),
+        0 0 18px rgb(0 168 252 / 0.55);
+}
+
+/* As the extension does: a long label ends in an ellipsis, never a hard cut. */
+.gtop .qm-t {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.qs {
+    width: min(100%, 420px);
+    padding: 14px;
+    border-radius: 28px;
+    background: #2b2b30;
+    box-shadow:
+        0 24px 64px rgb(0 0 0 / 0.6),
+        0 0 0 1px #3a3a42;
+}
+
+.qs-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.tile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    height: 60px;
+    padding-inline: 16px 6px;
+    border-radius: 999px;
+    background: #3c3c42;
+}
+
+.tile.on {
+    background: #1c71d8;
+}
+
+.tile .t {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.tile b,
+.tile .t span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.tile b {
+    font-size: 14px;
+}
+
+.tile .t span {
+    color: #dcdcdf;
+    font-size: 12.5px;
+}
+
+/* Full white on GNOME's blue: dimmed, it falls below 4.5:1. */
+.tile.on .t span {
+    color: #ffffff;
+}
+
+.tile .more {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 48px;
+    border-inline-start: 1px solid rgb(255 255 255 / 0.25);
+}
+
+.qs-menu {
+    margin-block-start: 12px;
+    padding: 14px 12px 8px;
+    border-radius: 22px;
+    background: #38383e;
+}
+
+.qs-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 6px 12px;
+}
+
+.qs-head .badge {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #1c71d8;
+}
+
+.qs-head b {
+    display: block;
+    font-size: 15px;
+}
+
+.qs-head span span {
+    color: #d0d0d4;
+    font-size: 12.5px;
+}
+
+.track {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 6px;
+}
+
+.cover {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    background: #16161c;
+    box-shadow: inset 0 0 0 1px #4a4a52;
+    color: #8c8c96;
+}
+
+.track .t {
+    min-width: 0;
+    line-height: 1.35;
+}
+
+.track b {
+    display: block;
+    font-size: 15px;
+}
+
+.track .t span {
+    display: block;
+    color: #c8c8cc;
+    font-size: 13px;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    padding: 6px 0 12px;
+}
+
+.controls span {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.09);
+}
+
+.controls span.main {
+    background: rgb(255 255 255 / 0.18);
+}
+
+.qs-sep {
+    height: 1px;
+    margin: 2px 6px 4px;
+    background: rgb(255 255 255 / 0.12);
+}
+
+.qs-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 40px;
+    padding-inline: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+}
+
+.qs-item.hl {
+    background: rgb(255 255 255 / 0.07);
+}
+
+/* ---- Docs body: table of contents + content ------------------------------ */
+
+.docs {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 80px;
+    padding: 88px var(--gutter) 120px;
 }
 
 .toc {
-    margin: 1.5rem 0 0;
+    position: sticky;
+    inset-block-start: 24px;
+    align-self: start;
+}
+
+.toc-title {
+    margin: 0 0 14px;
+    color: var(--mist);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.toc ol,
+.toc-m ol {
+    margin: 0;
     padding: 0;
     list-style: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem 1.1rem;
-    font-size: 0.95rem;
 }
+
+.toc ol {
+    border-inline-start: 1px solid var(--line);
+}
+
+.toc a,
+.toc-m a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding-inline: 16px;
+    color: var(--mist);
+    font-size: 15px;
+    text-decoration: none;
+}
+
+.toc a {
+    margin-inline-start: -1px;
+    border-inline-start: 2px solid transparent;
+}
+
+.toc a .n,
+.toc-m a .n {
+    min-width: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+}
+
+.toc a:hover,
+.toc-m a:hover {
+    color: var(--ink);
+    background: var(--raised);
+}
+
+.toc a:hover {
+    border-image: var(--spectrum-y) 1;
+}
+
+.toc-links {
+    display: grid;
+    gap: 2px;
+    margin: 28px 0 0;
+    padding: 20px 0 0;
+    border-block-start: 1px solid var(--line);
+    list-style: none;
+}
+
+.toc-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    color: var(--mist);
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.toc-links a:hover {
+    color: var(--ink);
+}
+
+/* The phone's contents list; hidden until the breakpoint below. */
+.toc-m {
+    display: none;
+    margin: 0 0 48px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--raised);
+}
+
+.toc-m summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 52px;
+    padding-inline: 16px;
+    color: var(--mist);
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    list-style: none;
+    cursor: pointer;
+}
+
+.toc-m summary::-webkit-details-marker {
+    display: none;
+}
+
+.toc-m[open] summary svg {
+    transform: rotate(180deg);
+}
+
+.toc-m ol {
+    padding: 6px 4px 10px;
+    border-block-start: 1px solid var(--line);
+}
+
+.content {
+    min-width: 0;
+    max-width: 880px;
+}
+
+.section {
+    scroll-margin-block-start: 24px;
+}
+
+.section + .section {
+    margin-block-start: 104px;
+}
+
+.kicker {
+    margin: 0;
+    color: var(--mist);
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.section h2 {
+    margin: 10px 0 0;
+    font-family: var(--display);
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: 0.02em;
+}
+
+.section h2::after {
+    content: '';
+    display: block;
+    width: 56px;
+    height: 3px;
+    margin-block-start: 18px;
+    border-radius: 3px;
+    background: var(--spectrum-x);
+}
+
+.section h3 {
+    margin: 40px 0 0;
+    font-size: 19px;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.section p {
+    max-width: 68ch;
+    margin: 20px 0 0;
+}
+
+.section h3 + p,
+.section h3 + ul {
+    margin-block-start: 10px;
+}
+
+.lead {
+    font-size: 19px;
+    line-height: 1.55;
+}
+
+.bullets {
+    display: grid;
+    gap: 10px;
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.bullets li {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 12px;
+}
+
+.bullets li::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin: 10px 0 0 4px;
+    border-radius: 2px;
+    background: var(--spectrum);
+}
+
+.content :not(pre) > code {
+    padding: 0.12em 0.4em;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--raised);
+    font-family: var(--mono);
+    font-size: 0.86em;
+    overflow-wrap: anywhere;
+}
+
+/* ---- Feature cards ------------------------------------------------------ */
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    margin-block-start: 36px;
+}
+
+.card {
+    position: relative;
+    overflow: hidden;
+    padding: 28px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--raised);
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: var(--spectrum-x);
+}
+
+.card .icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--paper);
+    color: var(--link);
+}
+
+.section .card h3 {
+    margin: 18px 0 0;
+    font-size: 18px;
+}
+
+.section .card p {
+    margin: 8px 0 0;
+    color: var(--mist);
+    font-size: 16px;
+}
+
+/* ---- Code --------------------------------------------------------------- */
+
+.code {
+    margin-block-start: 14px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--sunken);
+}
+
+.code header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 38px;
+    padding-inline: 16px;
+    border-block-end: 1px solid var(--line);
+    color: var(--mist);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.code header .dots {
+    display: flex;
+    gap: 6px;
+}
+
+.code header .dots i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--line);
+}
+
+.code pre {
+    margin: 0;
+    padding: 18px 20px;
+    overflow-x: auto;
+    color: #dfe6ff;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.code .p {
+    color: var(--mist);
+    user-select: none;
+}
+
+.code .k {
+    color: #5cc8ff;
+}
+
+.code .c {
+    color: #8b93ab;
+}
+
+.code .hi {
+    color: #f2a8ff;
+}
+
+/* ---- Callout ------------------------------------------------------------ */
 
 .note {
-    background: var(--accent-soft);
-    border-left: 3px solid var(--accent);
-    border-radius: 0 6px 6px 0;
-    padding: 0.8rem 1rem;
-    margin: 1.25rem 0;
+    display: flex;
+    gap: 16px;
+    margin-block-start: 24px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--note);
 }
 
-.note p {
+.note svg {
+    margin-block-start: 3px;
+    color: var(--link);
+}
+
+.section .note p {
     margin: 0;
 }
 
-.note p + p {
-    margin-top: 0.6rem;
+/* ---- Numbered steps ----------------------------------------------------- */
+
+.steps {
+    display: grid;
+    gap: 10px;
+    margin: 28px 0 0;
+    padding: 0;
+    list-style: none;
 }
 
-footer {
-    margin-top: 3.5rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid var(--line);
-    color: var(--ink-soft);
-    font-size: 0.92rem;
+.steps li {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--raised);
 }
 
-@media (max-width: 32rem) {
-    header {
-        padding-top: 2.25rem;
+.steps .n {
+    color: var(--link);
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 700;
+}
+
+/* ---- Tables and keys ---------------------------------------------------- */
+
+.table {
+    width: 100%;
+    margin-block-start: 24px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 16px;
+}
+
+.table th {
+    padding: 14px 18px;
+    border-block-end: 1px solid var(--line);
+    background: var(--raised);
+    color: var(--mist);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-align: start;
+    text-transform: uppercase;
+}
+
+.table td {
+    padding: 16px 18px;
+    border-block-end: 1px solid var(--line);
+    vertical-align: top;
+}
+
+.table tr:last-child td {
+    border-block-end: 0;
+}
+
+.table td:first-child {
+    font-weight: 600;
+}
+
+.table .muted {
+    color: var(--mist);
+}
+
+.kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding-inline: 9px;
+    border: 1px solid var(--line);
+    border-block-end-width: 3px;
+    border-radius: 8px;
+    background: var(--raised);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.keys {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--mist);
+    font-size: 14px;
+}
+
+/* ---- Architecture diagram ----------------------------------------------- */
+
+.diagram {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr) 36px minmax(0, 1fr) 36px minmax(0, 1fr)
+        36px minmax(0, 1fr);
+    margin-block-start: 32px;
+}
+
+.diagram .arrow {
+    display: grid;
+    place-items: center;
+    color: var(--mist);
+}
+
+.node {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--raised);
+}
+
+.node.key {
+    border: 2px solid transparent;
+    background:
+        linear-gradient(var(--raised), var(--raised)) padding-box,
+        var(--spectrum) border-box;
+}
+
+.node b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.node span {
+    display: block;
+    margin-block-start: 6px;
+    color: var(--mist);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.node.wide {
+    margin-block-start: 14px;
+}
+
+/* ---- Footer ------------------------------------------------------------- */
+
+.foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 28px 40px;
+    padding: 56px var(--gutter) 60px;
+    border-block-start: 1px solid var(--line);
+}
+
+.foot .brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.foot .brand img {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+}
+
+.foot .brand b {
+    display: block;
+    font-family: var(--display);
+    font-size: 16px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.foot .brand span {
+    color: var(--mist);
+    font-size: 15px;
+}
+
+.foot ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.foot a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--mist);
+    font-size: 15px;
+    text-decoration: none;
+}
+
+.foot a:hover {
+    color: var(--ink);
+}
+
+.foot .legal {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding-block-start: 24px;
+    border-block-start: 1px solid var(--line);
+    color: var(--mist);
+    font-size: 14px;
+}
+
+/* ---- Narrower screens --------------------------------------------------- */
+
+/* Tablets and small laptops: the drawing moves under the copy. */
+@media (max-width: 1100px) {
+    .hero {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 56px;
     }
 
-    h1 {
-        font-size: 2rem;
+    .shot {
+        align-items: flex-start;
+        max-width: 560px;
+    }
+
+    .docs {
+        grid-template-columns: 200px minmax(0, 1fr);
+        gap: 48px;
+    }
+
+    .diagram {
+        grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr);
+        row-gap: 14px;
+    }
+
+    /* Two per row: the arrow after the second node would point off the edge. */
+    .diagram .arrow:nth-child(4) {
+        display: none;
+    }
+}
+
+/* Phones. */
+@media (max-width: 760px) {
+    .bar {
+        height: 56px;
+        gap: 12px;
+        padding-inline: 16px;
+    }
+
+    .crumb .org,
+    .crumb .sep,
+    .bar .wide-only {
+        display: none;
+    }
+
+    .hero {
+        gap: 44px;
+        padding: 48px 16px 56px;
+    }
+
+    .halo {
+        inset-block-start: auto;
+        inset-block-end: -200px;
+        inset-inline-end: -420px;
+    }
+
+    .hero h1 {
+        font-size: 44px;
+    }
+
+    .tagline {
+        font-size: 21px;
+    }
+
+    .actions .button {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+
+    .gtop .clock {
+        display: none;
+    }
+
+    .gtop .qm {
+        margin-inline-start: auto;
+    }
+
+    .docs {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+        padding: 32px 16px 72px;
+    }
+
+    .toc {
+        display: none;
+    }
+
+    .toc-m {
+        display: block;
+    }
+
+    .section + .section {
+        margin-block-start: 72px;
+    }
+
+    .section h2 {
+        font-size: 26px;
+    }
+
+    .lead {
+        font-size: 18px;
+    }
+
+    .cards {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .card {
+        padding: 22px;
+    }
+
+    .diagram {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .diagram .arrow {
+        height: 28px;
+        transform: rotate(90deg);
+    }
+
+    .diagram .arrow:nth-child(4) {
+        display: grid;
+    }
+
+    /* Tables become labeled rows: the header row is kept for screen readers. */
+    .table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    .table,
+    .table tbody,
+    .table tr,
+    .table td {
+        display: block;
+    }
+
+    .table tr {
+        padding: 14px 16px;
+        border-block-end: 1px solid var(--line);
+    }
+
+    .table tr:last-child {
+        border-block-end: 0;
+    }
+
+    .table td {
+        padding: 2px 0;
+        border: 0;
+    }
+
+    .table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--mist);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .foot {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 40px 16px 44px;
     }
 }

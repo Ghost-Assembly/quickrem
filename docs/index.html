@@ -3,436 +3,1445 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>QuickRem — Remmina connections in GNOME Quick Settings</title>
+        <title>QuickRem · Ghost Assembly</title>
         <meta
             name="description"
-            content="Documentation for QuickRem, a GNOME Shell extension that puts saved Remmina connections in the Quick Settings panel: profiles, launching, architecture, testing and releasing."
+            content="QuickRem puts your saved Remmina connections in the GNOME quick settings menu: pick one and Remmina connects. Works with the Flatpak and distribution packages."
+        />
+        <meta name="color-scheme" content="dark light" />
+        <meta name="theme-color" content="#03030a" />
+        <link rel="icon" type="image/png" href="assets/favicon.png" />
+        <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+        <link
+            rel="preload"
+            href="assets/fonts/orbitron-latin.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin
         />
         <link rel="stylesheet" href="style.css" />
+        <link rel="stylesheet" href="project.css" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Ghost Assembly" />
+        <meta property="og:title" content="QuickRem" />
+        <meta
+            property="og:description"
+            content="Remmina connections in the GNOME quick settings menu."
+        />
+        <meta property="og:url" content="https://ghost-assembly.github.io/quickrem/" />
+        <meta
+            property="og:image"
+            content="https://ghost-assembly.github.io/quickrem/assets/og-image.png"
+        />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="The Ghost Assembly logo" />
+        <meta name="twitter:card" content="summary_large_image" />
     </head>
     <body>
         <a class="skip" href="#main">Skip to content</a>
 
-        <header>
-            <h1>QuickRem</h1>
-            <p class="tagline">Remmina connections in the Quick Settings panel.</p>
-            <p class="repo-link">
-                <a href="https://github.com/Ghost-Assembly/quickrem"
-                    >Source on GitHub</a
+        <div class="night">
+            <header class="bar">
+                <a class="crumb" href="#top" aria-label="QuickRem, back to top">
+                    <img src="assets/emblem.webp" alt="" width="32" height="32" />
+                    <span class="org">Ghost Assembly</span>
+                    <span class="sep" aria-hidden="true">/</span>
+                    <span class="product">QuickRem</span>
+                </a>
+                <nav aria-label="Site">
+                    <ul>
+                        <li><a href="#overview" aria-current="page">Docs</a></li>
+                        <li class="wide-only">
+                            <a
+                                href="https://github.com/Ghost-Assembly/quickrem/releases"
+                                >Releases</a
+                            >
+                        </li>
+                        <li>
+                            <a href="https://github.com/Ghost-Assembly/quickrem"
+                                >GitHub
+                                <svg
+                                    width="15"
+                                    height="15"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M14 4h6v6" />
+                                    <path d="M20 4l-9 9" />
+                                    <path
+                                        d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"
+                                    /></svg
+                            ></a>
+                        </li>
+                        <li class="wide-only"><span class="version">v0.1.1</span></li>
+                    </ul>
+                </nav>
+            </header>
+
+            <section class="hero" id="top" aria-labelledby="title">
+                <div class="halo" aria-hidden="true"></div>
+                <div>
+                    <p class="eyebrow">GNOME Shell extension</p>
+                    <h1 id="title">QuickRem</h1>
+                    <p class="tagline">Remmina connections in GNOME quick settings.</p>
+                    <p class="lede">
+                        Open the system menu, click the Remmina tile, pick a saved
+                        connection. The list is read from Remmina’s own profile
+                        directory and follows it as it changes, so a connection saved in
+                        Remmina shows up here without a reload.
+                    </p>
+                    <ul class="chips" aria-label="At a glance">
+                        <li class="chip">GNOME Shell 49–50</li>
+                        <li class="chip">Flatpak or native Remmina</li>
+                        <li class="chip">GPL-3.0-or-later</li>
+                    </ul>
+                    <p class="actions">
+                        <a class="button primary" href="#install"
+                            ><svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M12 4v11" />
+                                <path d="M7 10l5 5 5-5" />
+                                <path d="M5 20h14" />
+                            </svg>
+                            Install</a
+                        >
+                        <a
+                            class="button"
+                            href="https://github.com/Ghost-Assembly/quickrem"
+                            >Source on GitHub</a
+                        >
+                    </p>
+                </div>
+                <figure
+                    class="shot"
+                    role="img"
+                    aria-label="QuickRem in GNOME: the quick settings Remmina tile reads 5 profiles, and its open menu lists Build server, File drop, Lab desktop, Old thin client and Router admin, each with a protocol icon and user@host, then Open Remmina… and Settings."
                 >
-            </p>
-            <nav aria-label="Contents">
-                <ul class="toc">
-                    <li><a href="#profiles">Profiles</a></li>
-                    <li><a href="#install">Install</a></li>
-                    <li><a href="#preferences">Preferences</a></li>
-                    <li><a href="#launching">Launching</a></li>
-                    <li><a href="#secrets">Secrets</a></li>
-                    <li><a href="#architecture">Architecture</a></li>
-                    <li><a href="#testing">Testing</a></li>
-                    <li><a href="#packaging">Packaging</a></li>
-                    <li><a href="#contributing">Contributing</a></li>
-                    <li><a href="#releasing">Releasing</a></li>
-                    <li><a href="#development">Development</a></li>
+                    <div class="gtop">
+                        <span class="ws"><i></i><i></i><i></i></span>
+                        <span class="clock">Thu 24 Sep 18:24</span>
+                        <span class="sys"
+                            ><svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M4.5 10a11 11 0 0 1 15 0" />
+                                <path d="M7.5 13a7 7 0 0 1 9 0" />
+                                <path d="M12 17h.01" /></svg
+                            ><svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M4 10v4h3l5 4V6L7 10z" />
+                                <path d="M16 9a4 4 0 0 1 0 6" /></svg
+                            ><svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <rect x="3" y="7" width="16" height="10" rx="2" />
+                                <path d="M21 11v2" /></svg
+                        ></span>
+                    </div>
+                    <div class="qs">
+                        <div class="qs-row">
+                            <div class="tile">
+                                <svg
+                                    width="17"
+                                    height="17"
+                                    viewBox="0 0 16 16"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M2.5 2h11A1.5 1.5 0 0 1 15 3.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 10.5v-7A1.5 1.5 0 0 1 2.5 2Zm-.3 1.2v7.6h11.6V3.2Z"
+                                    />
+                                    <path d="M6.8 12h2.4v1.4H6.8Z" />
+                                    <path
+                                        d="M4.4 13.4h7.2a.6.6 0 0 1 0 1.2H4.4a.6.6 0 0 1 0-1.2Z"
+                                    />
+                                    <path
+                                        d="M5.2 6.6h2.6V5.4l2.8 2-2.8 2V8.2H5.2Z"
+                                    /></svg
+                                ><span class="t"
+                                    ><b>Remmina</b><span>5 profiles</span></span
+                                ><span class="more"
+                                    ><svg
+                                        width="14"
+                                        height="14"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2.4"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <path d="M9 6l6 6-6 6" /></svg
+                                ></span>
+                            </div>
+                            <div class="tile">
+                                <svg
+                                    width="17"
+                                    height="17"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"
+                                    /></svg
+                                ><span class="t"
+                                    ><b>Night Light</b><span>Disabled</span></span
+                                >
+                            </div>
+                        </div>
+                        <div class="qs-menu">
+                            <div class="qs-head">
+                                <span class="badge idle"
+                                    ><svg
+                                        width="17"
+                                        height="17"
+                                        viewBox="0 0 16 16"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M2.5 2h11A1.5 1.5 0 0 1 15 3.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 10.5v-7A1.5 1.5 0 0 1 2.5 2Zm-.3 1.2v7.6h11.6V3.2Z"
+                                        />
+                                        <path d="M6.8 12h2.4v1.4H6.8Z" />
+                                        <path
+                                            d="M4.4 13.4h7.2a.6.6 0 0 1 0 1.2H4.4a.6.6 0 0 1 0-1.2Z"
+                                        />
+                                        <path
+                                            d="M5.2 6.6h2.6V5.4l2.8 2-2.8 2V8.2H5.2Z"
+                                        /></svg></span
+                                ><span><b>Remmina</b><span>5 profiles</span></span>
+                            </div>
+                            <div class="qs-item profile hl">
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                                    <path d="M7 9l3 3-3 3" />
+                                    <path d="M12.5 15h4.5" /></svg
+                                ><span class="name">Build server</span
+                                ><span class="who">ops@build.example.lan</span>
+                            </div>
+                            <div class="qs-item profile">
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                                    />
+                                    <path d="M12 17v3" />
+                                    <path d="M8 20h8" /></svg
+                                ><span class="name">File drop</span
+                                ><span class="who">backup@nas.lan</span>
+                            </div>
+                            <div class="qs-item profile">
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <rect x="3" y="4" width="18" height="12" rx="2" />
+                                    <path d="M12 16v4" />
+                                    <path d="M8 20h8" /></svg
+                                ><span class="name">Lab desktop</span
+                                ><span class="who">alex@lab-pc.lan</span>
+                            </div>
+                            <div class="qs-item profile">
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <rect x="4" y="3" width="16" height="7" rx="1.5" />
+                                    <rect x="4" y="14" width="16" height="7" rx="1.5" />
+                                    <path d="M8 6.5h.01" />
+                                    <path d="M8 17.5h.01" /></svg
+                                ><span class="name">Old thin client</span
+                                ><span class="who">kiosk@thin-07.lan</span>
+                            </div>
+                            <div class="qs-item profile">
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M3 12h18" />
+                                    <path d="M12 3a14 14 0 0 1 0 18" />
+                                    <path d="M12 3a14 14 0 0 0 0 18" /></svg
+                                ><span class="name">Router admin</span
+                                ><span class="who">router.lan</span>
+                            </div>
+                            <div class="qs-sep"></div>
+                            <div class="qs-item">Open Remmina…</div>
+                            <div class="qs-item">Settings</div>
+                        </div>
+                    </div>
+                </figure>
+            </section>
+        </div>
+
+        <div class="docs">
+            <nav class="toc" aria-labelledby="toc-title">
+                <p class="toc-title" id="toc-title">On this page</p>
+                <ol>
+                    <li>
+                        <a href="#overview"><span class="n">01</span>Overview</a>
+                    </li>
+                    <li>
+                        <a href="#install"><span class="n">02</span>Install</a>
+                    </li>
+                    <li>
+                        <a href="#profiles"><span class="n">03</span>Profiles</a>
+                    </li>
+                    <li>
+                        <a href="#directory"
+                            ><span class="n">04</span>Where profiles live</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#launching"><span class="n">05</span>Launching</a>
+                    </li>
+                    <li>
+                        <a href="#preferences"><span class="n">06</span>Preferences</a>
+                    </li>
+                    <li>
+                        <a href="#security"><span class="n">07</span>Security</a>
+                    </li>
+                    <li>
+                        <a href="#architecture"
+                            ><span class="n">08</span>Architecture</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#testing"><span class="n">09</span>Testing</a>
+                    </li>
+                    <li>
+                        <a href="#packaging"><span class="n">10</span>Packaging</a>
+                    </li>
+                    <li>
+                        <a href="#contributing"
+                            ><span class="n">11</span>Contributing</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#releasing"><span class="n">12</span>Releasing</a>
+                    </li>
+                    <li>
+                        <a href="#development"><span class="n">13</span>Development</a>
+                    </li>
+                </ol>
+                <ul class="toc-links">
+                    <li>
+                        <a href="https://github.com/Ghost-Assembly/quickrem/issues"
+                            ><svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 8v5" />
+                                <path d="M12 16.5h.01" />
+                            </svg>
+                            Report an issue</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="https://github.com/Ghost-Assembly/quickrem/blob/main/SECURITY.md"
+                            ><svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"
+                                />
+                            </svg>
+                            Security policy</a
+                        >
+                    </li>
+                    <li>
+                        <a href="https://ghost-assembly.github.io/"
+                            ><svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M19 12H5" />
+                                <path d="M11 6l-6 6 6 6" />
+                            </svg>
+                            All Ghost Assembly projects</a
+                        >
+                    </li>
                 </ul>
             </nav>
-        </header>
 
-        <main id="main">
-            <p>
-                Open the system menu, click the Remmina tile, pick a saved connection.
-                The list is read from Remmina’s own profile directory and follows it as
-                it changes, so a connection saved in Remmina appears here without a
-                reload and without the extension being restarted.
-            </p>
+            <main class="content" id="main">
+                <details class="toc-m">
+                    <summary>
+                        On this page
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </summary>
+                    <ol>
+                        <li>
+                            <a href="#overview"><span class="n">01</span>Overview</a>
+                        </li>
+                        <li>
+                            <a href="#install"><span class="n">02</span>Install</a>
+                        </li>
+                        <li>
+                            <a href="#profiles"><span class="n">03</span>Profiles</a>
+                        </li>
+                        <li>
+                            <a href="#directory"
+                                ><span class="n">04</span>Where profiles live</a
+                            >
+                        </li>
+                        <li>
+                            <a href="#launching"><span class="n">05</span>Launching</a>
+                        </li>
+                        <li>
+                            <a href="#preferences"
+                                ><span class="n">06</span>Preferences</a
+                            >
+                        </li>
+                        <li>
+                            <a href="#security"><span class="n">07</span>Security</a>
+                        </li>
+                        <li>
+                            <a href="#architecture"
+                                ><span class="n">08</span>Architecture</a
+                            >
+                        </li>
+                        <li>
+                            <a href="#testing"><span class="n">09</span>Testing</a>
+                        </li>
+                        <li>
+                            <a href="#packaging"><span class="n">10</span>Packaging</a>
+                        </li>
+                        <li>
+                            <a href="#contributing"
+                                ><span class="n">11</span>Contributing</a
+                            >
+                        </li>
+                        <li>
+                            <a href="#releasing"><span class="n">12</span>Releasing</a>
+                        </li>
+                        <li>
+                            <a href="#development"
+                                ><span class="n">13</span>Development</a
+                            >
+                        </li>
+                    </ol>
+                </details>
 
-            <h2 id="profiles">Profiles</h2>
-            <p>
-                A Remmina profile is a <code>.remmina</code> file: GKeyFile with a
-                single <code>[remmina]</code> section of flat
-                <code>key=value</code> lines. QuickRem reads five of those keys —
-                <code>name</code>, <code>group</code>, <code>protocol</code>,
-                <code>server</code> and <code>username</code> — and ignores the rest.
-                Profiles are listed by <code>name</code>, collated the way the reader’s
-                locale collates, and a file with no usable <code>name</code> falls back
-                to its filename stem.
-            </p>
-            <p>Each entry carries an icon chosen from its <code>protocol</code>:</p>
-            <div class="scroll">
-                <table>
-                    <thead>
-                        <tr>
-                            <th scope="col">Protocol</th>
-                            <th scope="col">Icon</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>SSH</code></td>
-                            <td><code>utilities-terminal-symbolic</code></td>
-                        </tr>
-                        <tr>
-                            <td><code>SFTP</code></td>
-                            <td><code>folder-remote-symbolic</code></td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <code>RDP</code>, <code>VNC</code>, <code>GVNC</code>,
-                                <code>SPICE</code>
-                            </td>
-                            <td>
-                                <code>preferences-desktop-remote-desktop-symbolic</code>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><code>WWW</code></td>
-                            <td><code>web-browser-symbolic</code></td>
-                        </tr>
-                        <tr>
-                            <td><code>EXEC</code></td>
-                            <td><code>system-run-symbolic</code></td>
-                        </tr>
-                        <tr>
-                            <td>anything else</td>
-                            <td><code>network-server-symbolic</code></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <section class="section" id="overview" aria-labelledby="overview-title">
+                    <p class="kicker">01</p>
+                    <h2 id="overview-title">Overview</h2>
+                    <p class="lead">
+                        QuickRem adds one tile to quick settings. Its menu lists every
+                        connection saved in Remmina; pick one and Remmina connects.
+                        There is no top bar icon: Remmina is not a status, and an icon
+                        that never changes is noise.
+                    </p>
+                    <div class="cards">
+                        <article class="card">
+                            <span class="icon"
+                                ><svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <rect x="4" y="3" width="16" height="7" rx="1.5" />
+                                    <rect x="4" y="14" width="16" height="7" rx="1.5" />
+                                    <path d="M8 6.5h.01" />
+                                    <path d="M8 17.5h.01" /></svg
+                            ></span>
+                            <h3>Every saved profile</h3>
+                            <p>
+                                Sorted by name, with an icon per protocol and
+                                <code>user@host</code> beside each. A long list scrolls,
+                                capped at half the screen.
+                            </p>
+                        </article>
+                        <article class="card">
+                            <span class="icon"
+                                ><svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M4 12a8 8 0 0 1 14-5.3" />
+                                    <path d="M18 3v4h-4" />
+                                    <path d="M20 12a8 8 0 0 1-14 5.3" />
+                                    <path d="M6 21v-4h4" /></svg
+                            ></span>
+                            <h3>Follows Remmina</h3>
+                            <p>
+                                Saving, editing or removing a profile updates the menu
+                                straight away. A Remmina installed later, or a new
+                                <code>datadir_path</code>, is picked up too.
+                            </p>
+                        </article>
+                        <article class="card">
+                            <span class="icon"
+                                ><svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <rect x="3" y="4" width="18" height="12" rx="2" />
+                                    <path d="M12 16v4" />
+                                    <path d="M8 20h8" /></svg
+                            ></span>
+                            <h3>Opens it the way Remmina does</h3>
+                            <p>
+                                Through the handler registered for
+                                <code>application/x-remmina</code>, so a Flatpak and a
+                                distribution package work alike and a running Remmina is
+                                reused.
+                            </p>
+                        </article>
+                        <article class="card">
+                            <span class="icon"
+                                ><svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <rect x="5" y="11" width="14" height="9" rx="2" />
+                                    <path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg
+                            ></span>
+                            <h3>Never reads your passwords</h3>
+                            <p>
+                                Remmina encrypts them. QuickRem drops every password,
+                                passphrase and secret key while parsing, so none can
+                                reach a label or the log.
+                            </p>
+                        </article>
+                    </div>
+                </section>
+                <section class="section" id="install" aria-labelledby="install-title">
+                    <p class="kicker">02</p>
+                    <h2 id="install-title">Install</h2>
+                    <h3>Requires</h3>
+                    <ul class="bullets">
+                        <li><span>GNOME Shell 49 or 50.</span></li>
+                        <li>
+                            <span
+                                >Remmina, as the Flatpak
+                                (<code>org.remmina.Remmina</code>) or a distribution
+                                package.</span
+                            >
+                        </li>
+                    </ul>
+                    <h3>From a release</h3>
+                    <p>
+                        No clone and no toolchain: <code>gnome-extensions</code> ships
+                        with GNOME Shell. Installing also compiles the settings schema.
+                    </p>
+                    <div class="code night">
+                        <header>
+                            <span>Shell</span
+                            ><span class="dots" aria-hidden="true"
+                                ><i></i><i></i><i></i
+                            ></span>
+                        </header>
+                        <pre
+                            tabindex="0"
+                        ><span class="p">$ </span><span class="k">curl</span> -LO https://github.com/Ghost-Assembly/quickrem/releases/latest/download/quickrem@napalm255.github.io.shell-extension.zip
+<span class="p">$ </span><span class="k">gnome-extensions</span> install --force quickrem@napalm255.github.io.shell-extension.zip
+<span class="c"># log out and back in, then</span>
+<span class="p">$ </span><span class="k">gnome-extensions</span> enable quickrem@napalm255.github.io</pre>
+                    </div>
+                    <h3>From a clone</h3>
+                    <div class="code night">
+                        <header>
+                            <span>Shell</span
+                            ><span class="dots" aria-hidden="true"
+                                ><i></i><i></i><i></i
+                            ></span>
+                        </header>
+                        <pre
+                            tabindex="0"
+                        ><span class="p">$ </span><span class="k">just</span> setup
+<span class="p">$ </span><span class="k">just</span> install
+<span class="p">$ </span><span class="k">just</span> enable</pre>
+                    </div>
+                    <div class="note">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M12 11v5" />
+                            <path d="M12 7.5h.01" />
+                        </svg>
+                        <p>
+                            <strong>Log out and back in.</strong> Wayland cannot reload
+                            the Shell in place, so a newly installed extension does not
+                            exist for the running Shell: the first
+                            <code>enable</code> after a fresh install says so. Enable it
+                            in the new session.
+                        </p>
+                    </div>
+                </section>
+                <section class="section" id="profiles" aria-labelledby="profiles-title">
+                    <p class="kicker">03</p>
+                    <h2 id="profiles-title">Profiles</h2>
+                    <p>
+                        A Remmina profile is a <code>.remmina</code> file: a GKeyFile
+                        with one <code>[remmina]</code> group. QuickRem reads four of
+                        its keys — <code>name</code>, <code>protocol</code>,
+                        <code>server</code> and <code>username</code> — and ignores the
+                        rest. A profile with no usable <code>name</code> is listed by
+                        its filename stem, which Remmina’s default template
+                        (<code>%G_%P_%N_%h</code>) makes a fair description anyway.
+                    </p>
+                    <p>
+                        The list is sorted by name the way your locale collates, and
+                        each row shows <code>user@host</code>, or the host alone, dimmed
+                        beside the name. Long names and details end in an ellipsis
+                        rather than widening the menu.
+                    </p>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Protocol</th>
+                                <th scope="col">Icon</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Protocol"><code>SSH</code></td>
+                                <td data-label="Icon">
+                                    <code>utilities-terminal-symbolic</code>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Protocol"><code>SFTP</code></td>
+                                <td data-label="Icon">
+                                    <code>folder-remote-symbolic</code>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Protocol">
+                                    <code>RDP</code>, <code>VNC</code>,
+                                    <code>GVNC</code>, <code>SPICE</code>
+                                </td>
+                                <td data-label="Icon">
+                                    <code
+                                        >preferences-desktop-remote-desktop-symbolic</code
+                                    >
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Protocol"><code>WWW</code></td>
+                                <td data-label="Icon">
+                                    <code>web-browser-symbolic</code>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Protocol"><code>EXEC</code></td>
+                                <td data-label="Icon">
+                                    <code>system-run-symbolic</code>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Protocol">Anything else</td>
+                                <td data-label="Icon">
+                                    <code>network-server-symbolic</code>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p>
+                        Only regular files are read — a symlink to one is followed — and
+                        at most 256 KiB of each. A profile that cannot be read is
+                        skipped and the rest of the list stays. An empty list says why:
+                        <em>Remmina not found</em> and
+                        <em>Profile directory setting is invalid</em> both open the
+                        preferences; <em>No profiles saved</em> means Remmina is there
+                        with nothing in it yet.
+                    </p>
+                </section>
+                <section
+                    class="section"
+                    id="directory"
+                    aria-labelledby="directory-title"
+                >
+                    <p class="kicker">04</p>
+                    <h2 id="directory-title">Where profiles live</h2>
+                    <p>
+                        The directory is found rather than configured. The first of
+                        these that applies wins:
+                    </p>
+                    <ol class="steps">
+                        <li>
+                            <span class="n" aria-hidden="true">01</span
+                            ><span
+                                >The <strong>Profile directory</strong> setting. It must
+                                be absolute or start with <code>~/</code>; anything else
+                                is reported, not guessed at.</span
+                            >
+                        </li>
+                        <li>
+                            <span class="n" aria-hidden="true">02</span
+                            ><span
+                                ><strong><code>datadir_path</code></strong> from
+                                <code>remmina.pref</code>. The first readable of the
+                                native and the Flatpak copy decides — the native one
+                                first when <code>remmina</code> is on
+                                <code>PATH</code>.</span
+                            >
+                        </li>
+                        <li>
+                            <span class="n" aria-hidden="true">03</span
+                            ><span
+                                >A <strong>native install</strong>, when
+                                <code>remmina</code> is on <code>PATH</code>:
+                                <code>$XDG_DATA_HOME/remmina</code>, usually
+                                <code>~/.local/share/remmina</code>. It wins over the
+                                Flatpak because its profiles are the ones
+                                <code>remmina -c</code> would open.</span
+                            >
+                        </li>
+                        <li>
+                            <span class="n" aria-hidden="true">04</span
+                            ><span
+                                >The <strong>Flatpak</strong>, when
+                                <code>~/.var/app/org.remmina.Remmina/data/remmina</code>
+                                exists.</span
+                            >
+                        </li>
+                    </ol>
+                    <p>With none of them, the menu says <em>Remmina not found</em>.</p>
+                    <div class="note">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M12 11v5" />
+                            <path d="M12 7.5h.01" />
+                        </svg>
+                        <p>
+                            <strong>Nothing needs a restart.</strong> A fresh Remmina
+                            has no profile directory until it saves a profile, so
+                            QuickRem watches the nearest folder that exists and moves
+                            onto the directory once it appears. It also watches where
+                            detection looks — the Flatpak data directory and both
+                            <code>remmina.pref</code> files — so a Remmina installed
+                            after the extension, or a <code>datadir_path</code> set
+                            later, is picked up on its own. A native install only
+                            appears on <code>PATH</code>, which cannot be watched, so
+                            opening the menu while it says
+                            <em>Remmina not found</em> looks again.
+                        </p>
+                    </div>
+                </section>
+                <section
+                    class="section"
+                    id="launching"
+                    aria-labelledby="launching-title"
+                >
+                    <p class="kicker">05</p>
+                    <h2 id="launching-title">Launching</h2>
+                    <p>
+                        Remmina has no D-Bus interface and is not D-Bus activatable, so
+                        something has to be run. Shelling out to
+                        <code>flatpak run org.remmina.Remmina -c &lt;path&gt;</code>
+                        would hard-code the packaging, and a path handed straight to a
+                        sandboxed process is not necessarily one it can see.
+                    </p>
+                    <p>
+                        So QuickRem opens a profile through whatever is registered for
+                        <code>application/x-remmina</code>. On a Flatpak install that is
+                        Remmina’s own connect entry:
+                    </p>
+                    <div class="code night">
+                        <header>
+                            <span>org.remmina.Remmina-file.desktop</span
+                            ><span class="dots" aria-hidden="true"
+                                ><i></i><i></i><i></i
+                            ></span>
+                        </header>
+                        <pre tabindex="0">
+Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
+     org.remmina.Remmina -c @@u %U @@</pre>
+                    </div>
+                    <p>
+                        That entry <em>is</em> the <code>-c</code> connect action, and
+                        <code>--file-forwarding</code> has the portal map the path into
+                        the sandbox. The same call works unchanged for a distribution
+                        package and reuses an already-running Remmina.
+                        <em>Open Remmina…</em> goes through
+                        <code>Shell.AppSystem</code>, whose launch context puts the
+                        window on the workspace the click came from.
+                    </p>
+                    <p>
+                        The <strong>Launch command</strong> setting overrides both. It
+                        is split with <code>GLib.shell_parse_argv</code> and the profile
+                        path is appended as a separate argument, never interpolated — a
+                        profile named with a semicolon is an argument, not a second
+                        command.
+                    </p>
+                </section>
+                <section
+                    class="section"
+                    id="preferences"
+                    aria-labelledby="preferences-title"
+                >
+                    <p class="kicker">06</p>
+                    <h2 id="preferences-title">Preferences</h2>
+                    <p>
+                        Open them from <em>Settings</em> at the bottom of the menu, from
+                        the Extensions app, or with <code>just prefs</code> from a
+                        clone. The first row shows which directory QuickRem resolved and
+                        how, and says so when it does not exist yet or the setting is
+                        not a usable path — a wrong guess is visible rather than silent.
+                    </p>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Setting</th>
+                                <th scope="col">Empty means</th>
+                                <th scope="col">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Setting">Profile directory</td>
+                                <td data-label="Empty means">Detect it</td>
+                                <td data-label="Notes" class="muted">
+                                    An absolute path, or one starting with
+                                    <code>~/</code>.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Setting">Launch command</td>
+                                <td data-label="Empty means">
+                                    Use the <code>application/x-remmina</code> handler
+                                </td>
+                                <td data-label="Notes" class="muted">
+                                    For an unusual install. The profile path is appended
+                                    as its own argument.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+                <section class="section" id="security" aria-labelledby="security-title">
+                    <p class="kicker">07</p>
+                    <h2 id="security-title">Security</h2>
+                    <div class="note">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" />
+                        </svg>
+                        <p>
+                            <strong>The profile directory is trusted.</strong> Clicking
+                            a profile hands it to Remmina, and Remmina does what it
+                            says: <code>protocol=EXEC</code> runs its
+                            <code>execcommand</code>, and SSH profiles can run commands
+                            before and after connecting. Anyone who can write a profile
+                            there, or point <code>profile-dir</code> or
+                            <code>datadir_path</code> somewhere they can write, can get
+                            a command run the next time it is clicked. Keep it writable
+                            only by you.
+                        </p>
+                    </div>
+                    <h3 id="secrets">Passwords are never read</h3>
+                    <p>
+                        Remmina encrypts stored passwords with a key kept in
+                        <code>remmina.pref</code>. QuickRem cannot decrypt them and does
+                        not try: <code>modules/profiles.js</code> drops every key
+                        matching <code>password</code>, <code>passphrase</code> or
+                        <code>secret</code> <em>while parsing</em>, so a later code path
+                        that forgets to filter has nothing to leak into a label or the
+                        journal. <code>remmina.pref</code> itself is read for one key,
+                        <code>datadir_path</code>; the <code>secret=</code> beside it is
+                        never even unescaped. A unit test holds this: the parsed profile
+                        has only its five expected keys and none of the ciphertext.
+                    </p>
+                    <h3>What else QuickRem promises</h3>
+                    <ul class="bullets">
+                        <li>
+                            <span
+                                >A FIFO, a device node or a symlink to one —
+                                <code>/dev/zero</code>, say — is skipped without being
+                                opened, and no read goes past 256 KiB, so nothing in the
+                                profile directory can stall or exhaust the Shell.</span
+                            >
+                        </li>
+                        <li>
+                            <span
+                                >Log lines never name a profile: Remmina’s default
+                                filename embeds the server’s hostname.</span
+                            >
+                        </li>
+                        <li>
+                            <span
+                                >A profile path is always its own argument, never part
+                                of a command string.</span
+                            >
+                        </li>
+                    </ul>
+                    <p>
+                        Report a vulnerability privately through the
+                        <a
+                            href="https://github.com/Ghost-Assembly/quickrem/security/advisories/new"
+                            >security advisory form</a
+                        >; the
+                        <a
+                            href="https://github.com/Ghost-Assembly/quickrem/blob/main/SECURITY.md"
+                            >security policy</a
+                        >
+                        has the full scope.
+                    </p>
+                </section>
+                <section
+                    class="section"
+                    id="architecture"
+                    aria-labelledby="architecture-title"
+                >
+                    <p class="kicker">08</p>
+                    <h2 id="architecture-title">Architecture</h2>
+                    <p>
+                        The decisions live in modules that import nothing, so the suite
+                        tests them on plain Node. The files around them only move data
+                        between those rules and the disk or the Shell.
+                    </p>
+                    <div
+                        class="diagram"
+                        role="img"
+                        aria-label="Remmina’s files feed modules/store.js, which publishes profiles to modules/panel.js; activating a row goes through modules/launch.js to Remmina. store.js asks paths.js, profiles.js and keyfile.js for every decision."
+                    >
+                        <div class="node">
+                            <b>Remmina’s files</b
+                            ><span>remmina.pref and the profile directory.</span>
+                        </div>
+                        <span class="arrow"
+                            ><svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M5 12h14" />
+                                <path d="M13 6l6 6-6 6" /></svg
+                        ></span>
+                        <div class="node">
+                            <b>store.js</b
+                            ><span
+                                >Finds, reads and watches them, through detect.js and
+                                io.js.</span
+                            >
+                        </div>
+                        <span class="arrow"
+                            ><svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M5 12h14" />
+                                <path d="M13 6l6 6-6 6" /></svg
+                        ></span>
+                        <div class="node">
+                            <b>panel.js</b><span>The tile, its menu and its rows.</span>
+                        </div>
+                        <span class="arrow"
+                            ><svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M5 12h14" />
+                                <path d="M13 6l6 6-6 6" /></svg
+                        ></span>
+                        <div class="node">
+                            <b>launch.js</b
+                            ><span>What to run, with which arguments.</span>
+                        </div>
+                    </div>
+                    <div class="node wide key">
+                        <b>paths.js · profiles.js · keyfile.js</b
+                        ><span
+                            >Every decision about the files: which directory, what a
+                            profile says, how a key file reads. Import nothing; tested
+                            on Node.</span
+                        >
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">File</th>
+                                <th scope="col">Job</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="File"><code>extension.js</code></td>
+                                <td data-label="Job">
+                                    Pairs construction with teardown, nothing else.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="File">
+                                    <code>modules/keyfile.js</code>
+                                </td>
+                                <td data-label="Job">
+                                    Reads one group of a GKeyFile, exact keys only.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="File">
+                                    <code>modules/profiles.js</code>
+                                </td>
+                                <td data-label="Job">
+                                    Parses a profile, sorts, maps protocol to icon.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="File"><code>modules/paths.js</code></td>
+                                <td data-label="Job">
+                                    Decides which directory to read.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="File"><code>modules/io.js</code></td>
+                                <td data-label="Job">
+                                    Asynchronous probes, and bounded reads of regular
+                                    files.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="File">
+                                    <code>modules/detect.js</code>
+                                </td>
+                                <td data-label="Job">
+                                    Probes the system and applies the rules in
+                                    <code>paths.js</code>.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="File"><code>modules/store.js</code></td>
+                                <td data-label="Job">
+                                    Scans and watches; publishes
+                                    <code>profiles</code> and <code>source</code>.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="File">
+                                    <code>modules/launch.js</code>
+                                </td>
+                                <td data-label="Job">
+                                    Decides what to run, and with which arguments.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="File"><code>modules/panel.js</code></td>
+                                <td data-label="Job">
+                                    The tile, its menu and its rows.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="File"><code>prefs.js</code></td>
+                                <td data-label="Job">
+                                    Preferences, in their own process.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p>
+                        Every read and probe is asynchronous: a profile directory lives
+                        on whatever the home directory is mounted from, and a
+                        synchronous read would stall the whole desktop. File events are
+                        debounced for 300 ms, because Remmina rewrites a profile in
+                        several steps when it saves, and generation counters drop a scan
+                        or a resolve that a newer one has overtaken. The store emits one
+                        <code>changed</code> signal per update, and the panel rebuilds
+                        from it, holding no profile state of its own.
+                    </p>
+                    <h3>Why the list scrolls</h3>
+                    <p>
+                        A quick settings menu has no scrolling of its own: measured on a
+                        1080p screen, thirty profiles want 1296px of a 1048px work area
+                        and the rest is clipped. GNOME’s Wi-Fi menu shows eight networks
+                        and sends you to Settings for the rest, which suits a list you
+                        skim but not one you pick from. So
+                        <code>modules/panel.js</code> swaps its section’s actor for an
+                        <code>St.ScrollView</code> around the same box, capped at half
+                        the work area. The cap is applied just before the menu opens —
+                        the menu measures the height it animates to before it says it is
+                        opening — so a monitor or text-scaling change is picked up
+                        without watching for either.
+                    </p>
+                </section>
+                <section class="section" id="testing" aria-labelledby="testing-title">
+                    <p class="kicker">09</p>
+                    <h2 id="testing-title">Testing</h2>
+                    <p>
+                        The unit suite runs on Node with Vitest. The pure modules run
+                        exactly as they ship. <code>modules/store.js</code> runs against
+                        an in-memory Gio in <code>tests/stubs/</code> — FIFOs, device
+                        nodes and symlinks included — with timeouts queued rather than
+                        scheduled, so “five events caused one rescan” is an assertion,
+                        not a sleep.
+                    </p>
+                    <ul class="bullets">
+                        <li>
+                            <span
+                                ><code>modules/launch.js</code> is split out so its one
+                                security invariant is testable: a profile path is its
+                                own argument-vector element. A test fails if that stops
+                                being true.</span
+                            >
+                        </li>
+                        <li>
+                            <span
+                                ><code>prefs.js</code> is tested mostly for one trap: a
+                                translated string built while the module loads throws,
+                                and the preferences window then never opens,
+                                silently.</span
+                            >
+                        </li>
+                        <li>
+                            <span
+                                ><code>modules/panel.js</code> runs against stubs of St
+                                and the Shell’s menus that model what the Shell really
+                                does — it never destroys a quick toggle’s menu, and a
+                                menu measures its height before it announces it is
+                                opening.</span
+                            >
+                        </li>
+                    </ul>
+                    <p>
+                        <code>just test-live</code> adds what CI cannot have: it boots a
+                        throwaway headless GNOME Shell in private XDG directories,
+                        enables, disables and re-enables the extension, adds and removes
+                        a profile while it runs, and fails on a JavaScript error or a
+                        lifetime warning. <code>just test-docs</code> checks this site
+                        in Chromium and Firefox.
+                    </p>
+                </section>
+                <section
+                    class="section"
+                    id="packaging"
+                    aria-labelledby="packaging-title"
+                >
+                    <p class="kicker">10</p>
+                    <h2 id="packaging-title">Packaging</h2>
+                    <p>
+                        <code>just build</code> makes the zip with plain
+                        <code>zip</code>, because <code>gnome-extensions</code> ships
+                        inside the gnome-shell package and CI has no GNOME. The cost is
+                        that nothing checks the archive layout, and extensions.gnome.org
+                        is strict about it. So <code>scripts/pack-check.sh</code>, part
+                        of <code>just test-live</code>, keeps the official packer as the
+                        authority: it diffs the two archives and checks that
+                        <code>metadata.json</code> sits at the root.
+                    </p>
+                </section>
+                <section
+                    class="section"
+                    id="contributing"
+                    aria-labelledby="contributing-title"
+                >
+                    <p class="kicker">11</p>
+                    <h2 id="contributing-title">Contributing</h2>
+                    <p>
+                        <code>main</code> is protected: no direct pushes, no
+                        force-pushes and no merge commits. Everything lands through a
+                        pull request whose title is a Conventional Commit — it becomes
+                        the squashed commit subject.
+                    </p>
+                    <div class="code night">
+                        <header>
+                            <span>Shell</span
+                            ><span class="dots" aria-hidden="true"
+                                ><i></i><i></i><i></i
+                            ></span>
+                        </header>
+                        <pre
+                            tabindex="0"
+                        ><span class="p">$ </span><span class="k">git</span> switch -c type/short-description
+<span class="p">$ </span><span class="k">just</span> ci
+<span class="p">$ </span><span class="k">gh</span> pr create --fill
+<span class="p">$ </span><span class="k">gh</span> pr merge --squash --auto</pre>
+                    </div>
+                    <p>
+                        <code>ci</code> and <code>CodeQL</code> have to pass and the
+                        branch has to be current with <code>main</code>. No approving
+                        review is required, so a single maintainer is not locked out.
+                    </p>
+                </section>
+                <section
+                    class="section"
+                    id="releasing"
+                    aria-labelledby="releasing-title"
+                >
+                    <p class="kicker">12</p>
+                    <h2 id="releasing-title">Releasing</h2>
+                    <p>
+                        Set the version in <code>metadata.json</code> and
+                        <code>package.json</code> and land that through a pull request.
+                        Then tag the merged commit and push the tag:
+                    </p>
+                    <div class="code night">
+                        <header>
+                            <span>Shell</span
+                            ><span class="dots" aria-hidden="true"
+                                ><i></i><i></i><i></i
+                            ></span>
+                        </header>
+                        <pre
+                            tabindex="0"
+                        ><span class="p">$ </span><span class="k">git</span> switch main &amp;&amp; git pull
+<span class="p">$ </span><span class="k">git</span> tag -a v0.2.0 -m 'release v0.2.0'
+<span class="p">$ </span><span class="k">git</span> push origin v0.2.0</pre>
+                    </div>
+                    <p>
+                        The release workflow checks the tag against both files before
+                        building anything — otherwise a release titled v0.2.0 could ship
+                        a zip that tells GNOME it is 0.1.0 — and runs the full suite
+                        before it publishes.
+                    </p>
+                </section>
+                <section
+                    class="section"
+                    id="development"
+                    aria-labelledby="development-title"
+                >
+                    <p class="kicker">13</p>
+                    <h2 id="development-title">Development</h2>
+                    <div class="code night">
+                        <header>
+                            <span>justfile</span
+                            ><span class="dots" aria-hidden="true"
+                                ><i></i><i></i><i></i
+                            ></span>
+                        </header>
+                        <pre
+                            tabindex="0"
+                        ><span class="k">just</span>             <span class="c"># list every recipe</span>
+<span class="k">just</span> test        <span class="c"># unit suite, on Node</span>
+<span class="k">just</span> test-docs   <span class="c"># this site, in Chromium and Firefox</span>
+<span class="k">just</span> lint        <span class="c"># eslint, prettier, gschema, shellcheck</span>
+<span class="k">just</span> security    <span class="c"># gitleaks, trivy, osv-scanner, actionlint, zizmor</span>
+<span class="k">just</span> ci          <span class="c"># what CI runs: lint, tests, security, build</span>
+<span class="k">just</span> test-live   <span class="c"># headless gnome-shell, then the packer check</span>
+<span class="k">just</span> fixtures 5  <span class="c"># throwaway profiles for the menu and watcher</span>
+<span class="k">just</span> run         <span class="c"># a gnome-shell in a window (needs mutter-devkit)</span>
+<span class="k">just</span> logs        <span class="c"># follow the extension's output</span>
+<span class="k">just</span> docs        <span class="c"># serve this site on localhost:8000</span></pre>
+                    </div>
+                    <p>
+                        <code>mise.toml</code> installs the toolchain: Node is pinned to
+                        its major, the other tools track their latest release on
+                        purpose. <code>gjs</code>, <code>glib-compile-schemas</code>,
+                        <code>gnome-shell</code> and <code>gnome-extensions</code> come
+                        from the system, because they have to match the Shell you
+                        target.
+                    </p>
+                </section>
+            </main>
+        </div>
+
+        <footer class="foot night">
+            <div class="brand">
+                <img src="assets/emblem.webp" alt="" width="52" height="52" />
+                <div>
+                    <b>Ghost Assembly</b
+                    ><span
+                        >Small, sharp tools for the Linux desktop and the cloud.</span
+                    >
+                </div>
             </div>
-            <p>
-                The directory is found rather than configured. Highest precedence first:
-                the <code>profile-dir</code> setting, then
-                <code>datadir_path</code> from <code>remmina.pref</code>, then a native
-                install’s <code>$XDG_DATA_HOME/remmina</code>, then the Flatpak’s
-                <code>~/.var/app/org.remmina.Remmina/data/remmina</code>. A native
-                install wins over the Flatpak because its profiles are the ones
-                <code>remmina -c</code> on the command line would open.
-            </p>
-            <p class="note">
-                A fresh Remmina install has no profile directory at all. QuickRem
-                watches the nearest ancestor that does exist and moves the watch onto
-                the real directory once it appears, so the list fills in on its own
-                rather than needing the extension turned off and on again.
-            </p>
-
-            <h2 id="install">Install</h2>
-            <p>
-                Needs GNOME 49 or newer, and Remmina. From the latest release, with no
-                clone and no toolchain — <code>gnome-extensions</code> ships with GNOME
-                Shell itself:
-            </p>
-            <!--email_off-->
-            <pre><code>curl -LO 'https://github.com/Ghost-Assembly/quickrem/releases/latest/download/quickrem@napalm255.github.io.shell-extension.zip'
-gnome-extensions install --force 'quickrem@napalm255.github.io.shell-extension.zip'</code></pre>
-            <!--/email_off-->
-            <p>
-                That unpacks the extension and compiles its settings schema, so there is
-                no separate <code>glib-compile-schemas</code> step. Log out and back in
-                — Wayland cannot reload the Shell in place — then turn it on:
-            </p>
-            <!--email_off-->
-            <pre><code>gnome-extensions enable quickrem@napalm255.github.io</code></pre>
-            <!--/email_off-->
-            <p>From a clone:</p>
-            <pre><code>just setup
-just install
-just enable</code></pre>
-            <p class="note">
-                A brand-new extension is invisible to a running Shell on Wayland, so the
-                first <code>just enable</code> after a fresh <code>just install</code>
-                reports that the extension does not exist. Log out and back in, then run
-                it.
-            </p>
-
-            <h2 id="preferences">Preferences</h2>
-            <p>
-                <code>just prefs</code>, or the Settings entry at the bottom of the
-                menu. The first row shows which directory QuickRem resolved and how it
-                got there, so a wrong guess is visible rather than silent — including
-                when the directory does not exist yet.
-            </p>
-            <div class="scroll">
-                <table>
-                    <thead>
-                        <tr>
-                            <th scope="col">Setting</th>
-                            <th scope="col">Leaving it empty means</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Profile directory</td>
-                            <td>
-                                Detect it: <code>datadir_path</code>, then a native
-                                install, then the Flatpak
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Launch command</td>
-                            <td>
-                                Use the application registered for
-                                <code>application/x-remmina</code>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <p>
-                Launch command is the escape hatch for an unusual install. It is split
-                with <code>GLib.shell_parse_argv</code> and the profile path is appended
-                as a separate argument, never interpolated into the string.
-            </p>
-
-            <h2 id="launching">Launching</h2>
-            <p>
-                Remmina exposes no D-Bus interface and is not D-Bus activatable, so
-                something has to be executed. The obvious choice — shelling out to
-                <code>flatpak run org.remmina.Remmina -c &lt;path&gt;</code> — is the
-                wrong one: it hard-codes the packaging, and a path handed straight to a
-                sandboxed process is not necessarily a path that process can see.
-            </p>
-            <p>
-                Instead QuickRem opens a profile through whatever is registered for
-                <code>application/x-remmina</code>. On a Flatpak install that resolves
-                to Remmina’s own connect entry:
-            </p>
-            <pre><code>Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
-     org.remmina.Remmina -c @@u %U @@</code></pre>
-            <p>
-                That entry <em>is</em> the <code>-c</code> connect action, and
-                <code>--file-forwarding</code> makes the portal translate the path into
-                the sandbox. The same call works unchanged against a distribution
-                package, reuses an already-running Remmina through GApplication, and
-                needs no branching on how Remmina was installed. Opening Remmina’s own
-                window goes through <code>Shell.AppSystem</code>, which brings its own
-                launch context so the window lands on the workspace the click came from.
-            </p>
-
-            <h2 id="secrets">Secrets</h2>
-            <p>
-                Remmina encrypts stored passwords with a key kept in
-                <code>remmina.pref</code>. QuickRem cannot decrypt them and does not
-                try. <code>modules/profiles.js</code> drops every key matching
-                <code>password</code>, <code>passphrase</code> or <code>secret</code>
-                <em>while parsing</em>, rather than filtering them out later — so a
-                future code path that forgets to filter has nothing to leak into a menu
-                label, a subtitle or the journal.
-            </p>
-            <p>
-                <code>remmina.pref</code> itself is read for exactly one key,
-                <code>datadir_path</code>. The <code>secret=</code> sitting beside it is
-                never returned and never kept.
-            </p>
-            <p>
-                Both claims are tested. A unit test asserts the parsed object contains
-                none of the ciphertext and has only the six expected keys, and the live
-                check greps a whole Shell session log for a fixture password and
-                requires zero occurrences.
-            </p>
-
-            <h2 id="architecture">Architecture</h2>
-            <div class="scroll">
-                <table>
-                    <thead>
-                        <tr>
-                            <th scope="col">File</th>
-                            <th scope="col">Imports</th>
-                            <th scope="col">Job</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>extension.js</code></td>
-                            <td>Shell</td>
-                            <td>Pair construction with teardown, nothing else</td>
-                        </tr>
-                        <tr>
-                            <td><code>modules/profiles.js</code></td>
-                            <td>nothing</td>
-                            <td>Parse a profile, sort, map protocol to icon</td>
-                        </tr>
-                        <tr>
-                            <td><code>modules/paths.js</code></td>
-                            <td>nothing</td>
-                            <td>Decide which directory to read</td>
-                        </tr>
-                        <tr>
-                            <td><code>modules/store.js</code></td>
-                            <td>Gio, GLib, GObject</td>
-                            <td>Scan and watch it; publish <code>profiles</code></td>
-                        </tr>
-                        <tr>
-                            <td><code>modules/launch.js</code></td>
-                            <td>Gio, GLib, Shell</td>
-                            <td>Decide what to run, and with which arguments</td>
-                        </tr>
-                        <tr>
-                            <td><code>modules/panel.js</code></td>
-                            <td>St, QuickSettings</td>
-                            <td>The tile, its menu and its rows</td>
-                        </tr>
-                        <tr>
-                            <td><code>prefs.js</code></td>
-                            <td>Adw, Gtk</td>
-                            <td>Preferences, in its own process</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <p>
-                The store owns the data and the panel owns the widgets. The panel
-                rebuilds from <code>notify::profiles</code> and holds no profile state
-                of its own, so there is one place where the list can be wrong.
-            </p>
-            <p>
-                Scanning is asynchronous throughout. A profile directory lives on
-                whatever the home directory is mounted from, and a synchronous read
-                blocks the compositor thread — a stutter in the whole desktop, not just
-                in this menu. File events are debounced, because Remmina rewrites a
-                profile in several steps when it saves, and a generation counter throws
-                away a scan that a newer one has overtaken.
-            </p>
-
-            <h3>Why the list scrolls</h3>
-            <p>
-                <code>QuickToggleMenu</code> has no scrolling of its own. Measured on a
-                1080p screen, thirty profiles want 1296px of a 1048px work area and the
-                surplus is simply clipped. GNOME’s own Wi-Fi menu answers this by
-                showing eight networks and sending you to Settings for the rest, which
-                suits a list you skim but not one you pick from: the point here is that
-                any saved connection is one click away.
-            </p>
-            <p>
-                So <code>modules/panel.js</code> subclasses
-                <code>PopupMenuSection</code> and swaps its <code>actor</code> for an
-                <code>St.ScrollView</code> around the same box.
-                <code>PopupMenuBase.addMenuItem()</code> adds
-                <code>section.actor</code> but does its bookkeeping against the section
-                object, so key navigation, open-state propagation and activation all
-                survive the swap. The cap is half the work area, recomputed on every
-                rebuild and every menu open — which picks up a monitor change or a
-                text-scaling change without watching for either. Below the cap no
-                scrollbar appears at all.
-            </p>
-
-            <h2 id="testing">Testing</h2>
-            <p>
-                <code>modules/profiles.js</code> and
-                <code>modules/paths.js</code> import nothing — not <code>gi://</code>,
-                not <code>resource:///</code> — so Vitest runs them on plain Node
-                exactly as they ship. <code>modules/store.js</code> runs against an
-                in-memory Gio in <code>tests/stubs/</code>, which is what makes the
-                debounce, the generation counter and the watch re-attach reachable from
-                a unit test at all. Timeouts are queued rather than scheduled, so “this
-                burst of five events caused one rescan” is a direct assertion rather
-                than a sleep.
-            </p>
-            <p>
-                <code>modules/launch.js</code> is split out so the launch path can be
-                tested at all: <code>panel.js</code> imports St and QuickSettings, which
-                a unit test cannot supply meaningfully, and the launch code carries this
-                extension's one security invariant — a profile path is its own
-                argument-vector element and is never interpolated into
-                <code>launch-command</code>, so a profile named with a semicolon is an
-                argument rather than a second command. A test fails if that stops being
-                true.
-            </p>
-            <p>
-                <code>prefs.js</code> is tested too, mostly to pin one trap:
-                <code>_()</code> may not be called while a module is being evaluated. A
-                translated string in a module-level table throws
-                <code>gettext can only be called from extensions</code> and the
-                preferences window then never opens — silently, because nothing else in
-                the extension imports <code>prefs.js</code>. The stub’s
-                <code>gettext</code> throws unless a test says otherwise, so importing
-                the module is itself the check.
-            </p>
-            <p>
-                <code>modules/panel.js</code> and <code>extension.js</code> are widget
-                construction and lifecycle wiring. Asserting those against stubs of the
-                toolkit tests the stubs, so they are covered by
-                <code>scripts/headless-check.sh</code> instead, which boots a throwaway
-                headless <code>gnome-shell</code> in isolated XDG directories, enables,
-                disables and re-enables the extension, plants and removes a profile
-                while it runs, and fails on a JavaScript error, a leaked signal handler
-                or a deallocated-object warning. The enable/disable/enable cycle is the
-                point: a connect that outlives its disconnect only shows up on the
-                second enable.
-            </p>
-
-            <h2 id="packaging">Packaging</h2>
-            <p>
-                <code>just build</code> makes the zip with plain <code>zip</code>,
-                because <code>gnome-extensions</code> ships inside the gnome-shell
-                package and CI has no GNOME — making the build depend on it would pull a
-                whole desktop onto every runner. The cost is that nothing checks the
-                archive layout, and extensions.gnome.org is strict about it, so
-                <code>scripts/pack-check.sh</code> keeps the official tool as the
-                authority and diffs the two archives, then asserts
-                <code>metadata.json</code> sits at the archive root.
-            </p>
-
-            <h2 id="contributing">Contributing</h2>
-            <p>
-                <code>main</code> is protected: no direct pushes, no force-pushes and no
-                merge commits. Everything lands through a pull request whose title is a
-                Conventional Commit — that title becomes the squashed commit subject, so
-                the convention survives the merge.
-            </p>
-            <pre><code>git switch -c type/short-description
-just ci
-gh pr create --fill
-gh pr merge --squash --auto</code></pre>
-            <p>
-                <code>ci</code> and <code>CodeQL</code> have to pass before the merge
-                button unlocks, and the branch has to be current with <code>main</code>.
-                No approving review is required, so a single maintainer is not locked
-                out of their own repository.
-            </p>
-
-            <h2 id="releasing">Releasing</h2>
-            <p>
-                Set the version in <code>metadata.json</code> and
-                <code>package.json</code> and land that through a pull request like
-                anything else. Then tag the merged commit and push the tag — tags are
-                not covered by branch protection:
-            </p>
-            <pre><code>git switch main &amp;&amp; git pull
-git tag -a v0.1.0 -m 'release v0.1.0'
-git push origin v0.1.0</code></pre>
-            <p>
-                The release workflow checks the tag against both files before it builds
-                anything. A tag that disagrees with the tree would otherwise ship a
-                release titled v0.2.0 containing a zip that tells GNOME it is 0.1.0, and
-                nothing downstream would notice. The full suite gates the publish.
-            </p>
-
-            <h2 id="development">Development</h2>
-            <pre><code>just            # list every recipe
-just test       # unit suite, runs on Node
-just lint       # eslint, prettier, gschema and shellcheck
-just security   # gitleaks, trivy, osv-scanner, actionlint, zizmor
-just ci         # everything CI runs
-just fixtures 5 # throwaway profiles, to exercise the menu and the watcher
-just test-live  # headless Shell smoke test, then the packer check
-just logs       # follow the extension's output
-just clean      # remove node_modules, coverage and build output</code></pre>
-            <p>
-                <code>mise.toml</code> pins every tool, so <code>just ci</code> behaves
-                the same locally and on a runner. <code>gjs</code>,
-                <code>glib-compile-schemas</code>, <code>gnome-shell</code> and
-                <code>gnome-extensions</code> come from the system rather than mise,
-                because they have to match the Shell you are targeting.
-            </p>
-        </main>
-
-        <footer>
-            <p>
-                QuickRem is free software under the GPL-3.0-or-later.
-                <a href="https://github.com/Ghost-Assembly/quickrem"
-                    >Source and issues on GitHub</a
-                >.
-            </p>
+            <nav aria-label="Footer">
+                <ul>
+                    <li>
+                        <a href="https://ghost-assembly.github.io/">All projects</a>
+                    </li>
+                    <li>
+                        <a href="https://github.com/Ghost-Assembly/quickrem">Source</a>
+                    </li>
+                    <li>
+                        <a href="https://github.com/Ghost-Assembly/quickrem/releases"
+                            >Releases</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="https://github.com/Ghost-Assembly/quickrem/blob/main/SECURITY.md"
+                            >Security</a
+                        >
+                    </li>
+                </ul>
+            </nav>
+            <p class="legal">QuickRem is free software under the GPL-3.0-or-later.</p>
         </footer>
     </body>
 </html>
