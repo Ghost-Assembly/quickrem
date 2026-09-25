@@ -1,12 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
+import Gio, {
     handlers,
     launches,
     makeHandler,
     spawned,
     reset as resetGio,
 } from './stubs/gi-gio.js';
+import GLib from './stubs/gi-glib.js';
 import { activations, registerApp, reset as resetShell } from './stubs/gi-shell.js';
 import { FakeSettings } from './stubs/settings.js';
 import { launchProfile, launchRemmina } from '../modules/launch.js';
@@ -28,6 +29,36 @@ beforeEach(() => {
     resetShell();
 });
 
+afterEach(() => {
+    vi.restoreAllMocks();
+});
+
+describe('the GLib stand-ins these tests lean on', () => {
+    // Captured from the real GLib 2.88 through GJS. If the stubs drift from
+    // these, every test below is checking the stub instead of launch.js.
+    it('splits a command line exactly as GLib.shell_parse_argv does', () => {
+        expect(
+            GLib.shell_parse_argv(`a 'b c' "d \\"e\\" \\$f \\x" g\\ h i#j # comment`),
+        ).toEqual([true, ['a', 'b c', 'd "e" $f \\x', 'g h', 'i#j']]);
+        expect(GLib.shell_parse_argv(`x"y"'z' \\\nw`)).toEqual([true, ['xyz', 'w']]);
+
+        for (const bad of ['a "unclosed', '   ', 'a\\'])
+            expect(() => GLib.shell_parse_argv(bad)).toThrow();
+    });
+
+    it('escapes a file URI exactly as Gio.File.get_uri does', () => {
+        let printable = '';
+        for (let code = 32; code < 127; code++)
+            if (code !== 47) printable += String.fromCharCode(code);
+
+        expect(Gio.File.new_for_path(`/p/${printable}é.remmina`).get_uri()).toBe(
+            "file:///p/%20!%22%23$%25&'()*+,-.0123456789:%3B%3C=%3E%3F@" +
+                'ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D%5E_%60abcdefghijklmnopqrstuvwxyz' +
+                '%7B%7C%7D~%C3%A9.remmina',
+        );
+    });
+});
+
 describe('launchProfile', () => {
     it('opens the profile through the registered handler', () => {
         handlers.set(MIME, makeHandler('org.remmina.Remmina-file.desktop'));
@@ -45,6 +76,27 @@ describe('launchProfile', () => {
 
         expect(launches).toHaveLength(0);
         expect(spawned).toHaveLength(0);
+    });
+
+    it('hands the handler an escaped URI for a path with spaces and #', () => {
+        handlers.set(MIME, makeHandler('org.remmina.Remmina-file.desktop'));
+
+        launchProfile(profile('/profiles/My Lab #2.remmina'), new FakeSettings());
+
+        expect(launches[0].uris).toEqual(['file:///profiles/My%20Lab%20%232.remmina']);
+    });
+
+    it('keeps the profile path out of the log when a launch fails', () => {
+        // Remmina's default filename embeds the server's hostname.
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        launchProfile(
+            profile('/profiles/prod-db.example.com.remmina'),
+            settingsWith('myremmina "unclosed'),
+        );
+
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn.mock.calls[0].join(' ')).not.toContain('prod-db');
     });
 
     it('prefers an explicit launch-command over the handler', () => {
