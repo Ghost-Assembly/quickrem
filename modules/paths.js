@@ -1,9 +1,12 @@
 // Where Remmina keeps its profiles, and how we decide.
 //
-// Imports nothing, for the same reasons as modules/profiles.js. Every probe
+// Imports nothing but modules/keyfile.js, which imports nothing, for the same
+// reasons as modules/profiles.js. Every probe
 // this needs — is there a native remmina on PATH, does the flatpak data
 // directory exist, what does remmina.pref say — is passed in by the caller, so
 // each branch of the precedence below is a unit test with no filesystem.
+
+import { readGroup } from './keyfile.js';
 
 /** Flatpak application id, and the ids the launcher needs. */
 export const APP_ID = 'org.remmina.Remmina';
@@ -118,31 +121,63 @@ export function prefFileCandidates({ home, xdgConfigHome, hasNativeRemmina }) {
     return hasNativeRemmina ? [native, flatpak] : [flatpak, native];
 }
 
+/** The group remmina.pref keeps its settings under. */
+const PREF_GROUP = 'remmina_pref';
+
+/** The one key read from it. */
+const DATADIR_KEY = 'datadir_path';
+
 /**
  * Pull `datadir_path` out of a remmina.pref.
  *
  * The same file holds `secret=`, the key Remmina encrypts stored passwords
- * with. Only datadir_path is ever returned, and the caller never keeps the
- * rest of the text.
+ * with. The reader is told to keep only datadir_path, so the secret is never
+ * so much as unescaped, and the caller never keeps the rest of the text.
  *
  * @param {string} text Contents of remmina.pref.
  * @returns {string|null} The configured profile directory, or null when unset.
  */
 export function parseDatadirPath(text) {
-    if (typeof text !== 'string') return null;
+    const value = readGroup(text, PREF_GROUP, key => key === DATADIR_KEY).get(
+        DATADIR_KEY,
+    );
 
-    for (const rawLine of text.split('\n')) {
-        const line = rawLine.trim();
-        if (!line.startsWith('datadir_path')) continue;
+    return value === undefined || value.trim() === '' ? null : value;
+}
 
-        const eq = line.indexOf('=');
-        if (eq < 1) continue;
+/**
+ * Every path whose appearance or change can alter what automatic detection
+ * decides: the Flatpak data directory, and remmina.pref in both places it may
+ * be. A native install is found on PATH instead, which cannot be watched.
+ *
+ * @param {object} env Environment.
+ * @param {string} env.home The user's home directory.
+ * @param {string} [env.xdgConfigHome] XDG_CONFIG_HOME, if set.
+ * @returns {Array<string>} Absolute paths.
+ */
+export function detectionPaths({ home, xdgConfigHome }) {
+    return [
+        flatpakDataDir(home),
+        ...prefFileCandidates({ home, xdgConfigHome, hasNativeRemmina: true }),
+    ];
+}
 
-        const value = line.slice(eq + 1).trim();
-        if (value !== '') return value;
-    }
+/**
+ * The `profile-dir` setting as a directory, or null when it cannot be one.
+ *
+ * A leading `~` is the home directory, as a person typing a path expects.
+ * Anything else must be absolute: a relative path would be resolved against
+ * gnome-shell's working directory, which is nothing the user chose.
+ *
+ * @param {string} value The trimmed setting.
+ * @param {string} home The user's home directory.
+ * @returns {string|null} An absolute path, or null.
+ */
+export function expandOverride(value, home) {
+    if (value === '~') return home;
+    if (value.startsWith('~/')) return joinPath(home, value.slice(2));
 
-    return null;
+    return value.startsWith('/') ? value : null;
 }
 
 /**
@@ -187,7 +222,8 @@ export async function readDatadirPath(candidates, readText) {
  * @param {boolean} [probe.hasNativeRemmina] Whether `remmina` is on PATH.
  * @param {boolean} [probe.hasFlatpakData] Whether the flatpak data dir exists.
  * @returns {{dir: string|null, source: string}} The directory and why it was
- *   chosen: one of override, datadir, native, flatpak or none.
+ *   chosen: one of override, datadir, native, flatpak or none — or invalid,
+ *   with no directory, when the override is set but is not an absolute path.
  */
 export function resolveProfileDir({
     override,
@@ -198,7 +234,12 @@ export function resolveProfileDir({
     hasFlatpakData = false,
 }) {
     const trimmedOverride = (override ?? '').trim();
-    if (trimmedOverride !== '') return { dir: trimmedOverride, source: 'override' };
+    if (trimmedOverride !== '') {
+        // Not a fallback to detection: a setting that is ignored silently
+        // reads as one that works, and the preferences window says why.
+        const dir = expandOverride(trimmedOverride, home);
+        return dir ? { dir, source: 'override' } : { dir: null, source: 'invalid' };
+    }
 
     const trimmedDatadir = (datadirPath ?? '').trim();
     if (trimmedDatadir !== '') return { dir: trimmedDatadir, source: 'datadir' };
