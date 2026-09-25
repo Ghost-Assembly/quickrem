@@ -1,0 +1,48 @@
+/*
+ * QuickRem's additions to the shared Ghost Assembly docs stylesheet.
+ *
+ * style.css is the same file on every quick* docs site and is not edited
+ * here; this file is linked after it and only adds what QuickRem's product
+ * drawing needs. Colors inside the drawing are GNOME's, as in style.css.
+ */
+
+/* QuickRem has no top bar item, so nothing sits between the clock and the
+ * system indicators; this keeps them at the end once the clock is hidden. */
+.gtop .sys {
+    margin-inline-start: auto;
+}
+
+/* The tile is never checked — it opens a list, it is not a switch — so its
+ * menu header icon sits on GNOME's neutral circle, not the accent blue. */
+.qs-head .badge.idle {
+    background: #4b4b52;
+}
+
+/* A profile row: protocol icon, name, and the dimmed user@host that the
+ * extension ellipsizes past 10em. */
+.qs-item.profile {
+    justify-content: flex-start;
+    gap: 12px;
+}
+
+.qs-item.profile svg {
+    flex: none;
+}
+
+.qs-item.profile .name,
+.qs-item.profile .who {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.qs-item.profile .name {
+    flex: 1;
+    min-width: 0;
+}
+
+.qs-item.profile .who {
+    max-width: 10em;
+    color: #b8b8bc;
+    font-size: 13px;
+}

@@ -86,6 +86,7 @@ appended as a separate argument, never interpolated into the string.
 ```
 just              # list every recipe
 just test         # unit suite, runs on Node
+just test-docs    # the docs site, in Chromium and Firefox
 just lint         # eslint, prettier, gschema and shellcheck
 just ci           # everything CI runs
 just fixtures 5   # write throwaway profiles to exercise the menu and watcher
