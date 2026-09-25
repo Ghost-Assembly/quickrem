@@ -6,14 +6,13 @@
 // Vitest on plain Node so the parser can be pinned by tests rather than by
 // hand-checking it against a live Shell.
 //
-// Remmina writes GKeyFile, and GLib.KeyFile would be the more complete reader.
-// The subset Remmina actually emits is one `[remmina]` section of flat
-// key=value lines, which is small enough to parse here, and keeping `gi://GLib`
-// out of the module most worth testing exhaustively is worth the trade.
+// Remmina writes GKeyFile; modules/keyfile.js reads it, and is shared with the
+// remmina.pref reader in modules/paths.js so there is one reader, not two.
 
-// paths.js imports nothing either, so taking the suffix from it keeps this
-// module loadable by Vitest and by the preferences process while leaving one
-// definition of what a profile file is called.
+// paths.js and keyfile.js import nothing either, so taking the suffix and the
+// reader from them keeps this module loadable by Vitest and by the preferences
+// process while leaving one definition of each.
+import { readGroup } from './keyfile.js';
 import { PROFILE_SUFFIX } from './paths.js';
 
 /** The one section header a .remmina file has. */
@@ -27,15 +26,6 @@ const SECTION = 'remmina';
  * leak into a menu label or a log line.
  */
 const SECRET_KEY = /password|passphrase|secret/i;
-
-/** GKeyFile value escapes, in the order they must be undone. */
-const ESCAPES = new Map([
-    [String.raw`\n`, '\n'],
-    [String.raw`\t`, '\t'],
-    [String.raw`\r`, '\r'],
-    [String.raw`\s`, ' '],
-    [String.raw`\\`, '\\'],
-]);
 
 /**
  * Icon for a protocol, by the `protocol=` values Remmina's bundled plugins use.
@@ -57,16 +47,6 @@ const PROTOCOL_ICONS = new Map([
 const FALLBACK_ICON = 'network-server-symbolic';
 
 /**
- * Undo the GKeyFile escapes Remmina writes into values.
- *
- * @param {string} value Raw value, everything after the first `=`.
- * @returns {string} The value with escape sequences resolved.
- */
-function unescapeValue(value) {
-    return value.replace(/\\[ntrs\\]/g, match => ESCAPES.get(match) ?? match);
-}
-
-/**
  * The profile name to fall back on when the file has no usable `name=`.
  *
  * Remmina's own default filename template is `%G_%P_%N_%h.remmina`, so the stem
@@ -81,59 +61,22 @@ function stemOf(path) {
 }
 
 /**
- * Read the `[remmina]` section into a Map, dropping encrypted values.
- *
- * @param {string} text Contents of a .remmina file.
- * @returns {Map<string, string>} Keys to unescaped values.
- */
-function readSection(text) {
-    const fields = new Map();
-    let inSection = false;
-
-    for (const rawLine of text.split('\n')) {
-        const line = rawLine.trim();
-
-        // GKeyFile comments are `#`; Remmina never writes `;`, but a
-        // hand-edited file might, and neither is ever a key.
-        if (line === '' || line.startsWith('#') || line.startsWith(';')) continue;
-
-        if (line.startsWith('[')) {
-            inSection = line === `[${SECTION}]`;
-            continue;
-        }
-
-        if (!inSection) continue;
-
-        // Split on the FIRST `=` only. Values routinely contain `=` — base64
-        // padding and RDP option strings both do — and splitting on all of them
-        // truncates the value silently.
-        const eq = line.indexOf('=');
-        if (eq < 1) continue;
-
-        const key = line.slice(0, eq).trim();
-        if (SECRET_KEY.test(key)) continue;
-
-        fields.set(key, unescapeValue(line.slice(eq + 1)));
-    }
-
-    return fields;
-}
-
-/**
  * Parse one .remmina file.
  *
  * @param {string} text Contents of the file.
  * @param {string} path Absolute path it was read from.
- * @returns {{name: string, group: string, protocol: string, server: string,
- *   username: string, path: string}} The profile.
+ * @returns {{name: string, protocol: string, server: string, username: string,
+ *   path: string}} The profile. Only what the menu shows or the launcher needs
+ *   is kept; Remmina's `group=` is not, because nothing here displays it.
  */
 export function parseProfile(text, path) {
-    const fields = readSection(text);
+    // Encrypted keys are rejected by the reader itself, so they never reach
+    // the Map, let alone the returned object.
+    const fields = readGroup(text, SECTION, key => !SECRET_KEY.test(key));
     const name = (fields.get('name') ?? '').trim();
 
     return {
         name: name === '' ? stemOf(path) : name,
-        group: (fields.get('group') ?? '').trim(),
         protocol: (fields.get('protocol') ?? '').trim().toUpperCase(),
         server: (fields.get('server') ?? '').trim(),
         username: (fields.get('username') ?? '').trim(),
@@ -165,7 +108,6 @@ function sameProfile(a, b) {
     return (
         a.path === b.path &&
         a.name === b.name &&
-        a.group === b.group &&
         a.protocol === b.protocol &&
         a.server === b.server &&
         a.username === b.username

@@ -85,7 +85,9 @@ function launchWith(settings, path, what, fallback) {
  * @param {Gio.Settings} settings The extension's settings.
  */
 export function launchProfile(profile, settings) {
-    launchWith(settings, profile.path, `open ${profile.path}`, () => {
+    // The path stays out of the log line: Remmina's default filename template
+    // embeds the server's hostname, and the journal outlives the profile.
+    launchWith(settings, profile.path, 'open a profile', () => {
         const handler = Gio.AppInfo.get_default_for_type(PROFILE_MIME_TYPE, false);
         if (!handler) {
             console.warn(

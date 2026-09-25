@@ -24,9 +24,9 @@ describe('parseProfile', () => {
             PATH,
         );
 
+        // group= is not kept: nothing in the menu shows it.
         expect(profile).toEqual({
             name: 'Prod DB',
-            group: 'Work',
             protocol: 'SSH',
             server: 'db.example.com',
             username: 'napalm',
@@ -54,7 +54,6 @@ describe('parseProfile', () => {
             expect(serialized).not.toContain(secret);
 
         expect(Object.keys(profile).sort()).toEqual([
-            'group',
             'name',
             'path',
             'protocol',
@@ -169,7 +168,6 @@ describe('sameProfiles', () => {
     const one = {
         path: '/p/a.remmina',
         name: 'A',
-        group: 'g',
         protocol: 'SSH',
         server: 's',
         username: 'u',
@@ -189,7 +187,7 @@ describe('sameProfiles', () => {
             ),
         ).toBe(false);
 
-        for (const field of ['path', 'name', 'group', 'protocol', 'server', 'username'])
+        for (const field of ['path', 'name', 'protocol', 'server', 'username'])
             expect(sameProfiles([one], [{ ...one, [field]: 'changed' }])).toBe(false);
     });
 });

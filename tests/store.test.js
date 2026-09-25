@@ -18,7 +18,21 @@ const FLATPAK_CONFIG = flatpakConfigDir(HOME);
 
 /** Let every pending promise in the store finish. */
 async function settle() {
-    for (let i = 0; i < 5; i++) await new Promise(resolve => setTimeout(resolve, 0));
+    for (let i = 0; i < 20; i++) await new Promise(resolve => setTimeout(resolve, 0));
+}
+
+/**
+ * @param {string} path A directory.
+ * @returns {object|undefined} The live monitor on it, if there is one.
+ */
+function monitorOn(path) {
+    return monitors.findLast(monitor => monitor.path === path && !monitor.cancelled);
+}
+
+/** Fire every queued debounce and let what it started finish. */
+async function flush() {
+    runTimeouts();
+    await settle();
 }
 
 /**
@@ -48,6 +62,7 @@ beforeEach(() => {
     resetGio();
     resetGLib();
     env.home = HOME;
+    fs.mkdir(HOME);
 });
 
 describe('finding the directory', () => {
@@ -56,17 +71,17 @@ describe('finding the directory', () => {
 
         const store = await newStore();
 
-        expect(store.directory).toBe(FLATPAK_DATA);
+        expect(store._directory).toBe(FLATPAK_DATA);
         expect(store.source).toBe('flatpak');
     });
 
     it('prefers a native install when remmina is on PATH', async () => {
         fs.mkdir(FLATPAK_DATA);
-        env.programs.add('remmina');
+        fs.program('/usr/bin/remmina');
 
         const store = await newStore();
 
-        expect(store.directory).toBe(`${HOME}/.local/share/remmina`);
+        expect(store._directory).toBe(`${HOME}/.local/share/remmina`);
         expect(store.source).toBe('native');
     });
 
@@ -79,14 +94,14 @@ describe('finding the directory', () => {
 
         const store = await newStore();
 
-        expect(store.directory).toBe('/srv/profiles');
+        expect(store._directory).toBe('/srv/profiles');
         expect(store.source).toBe('datadir');
     });
 
     it('reports nothing found when Remmina is not installed', async () => {
         const store = await newStore();
 
-        expect(store.directory).toBe('');
+        expect(store._directory).toBe('');
         expect(store.source).toBe('none');
         expect(store.profiles).toEqual([]);
     });
@@ -133,7 +148,7 @@ describe('scanning', () => {
         const store = await newStore();
 
         expect(store.profiles).toEqual([]);
-        expect(store.directory).toBe(FLATPAK_DATA);
+        expect(store._directory).toBe(FLATPAK_DATA);
     });
 
     it('notifies once the scan lands', async () => {
@@ -155,7 +170,7 @@ describe('watching', () => {
 
         await newStore();
 
-        expect(monitors.at(-1).path).toBe(FLATPAK_DATA);
+        expect(monitorOn(FLATPAK_DATA)).toBeDefined();
     });
 
     it('watches the nearest existing ancestor when it does not, then moves on', async () => {
@@ -167,16 +182,16 @@ describe('watching', () => {
         const settings = new FakeSettings({ 'profile-dir': `${ancestor}/later` });
 
         const store = await newStore(settings);
-        expect(monitors.at(-1).path).toBe(ancestor);
+        expect(monitorOn(ancestor)).toBeDefined();
 
         fs.mkdir(`${ancestor}/later`);
         fs.write(`${ancestor}/later/new.remmina`, '[remmina]\nname=New\n');
 
-        monitors.at(-1).fire();
-        runTimeouts();
-        await settle();
+        monitorOn(ancestor).fire('later');
+        await flush();
 
-        expect(monitors.at(-1).path).toBe(`${ancestor}/later`);
+        expect(monitorOn(ancestor)).toBeUndefined();
+        expect(monitorOn(`${ancestor}/later`)).toBeDefined();
         expect(store.profiles.map(p => p.name)).toEqual(['New']);
     });
 
@@ -186,9 +201,8 @@ describe('watching', () => {
         expect(store.profiles).toEqual([]);
 
         writeProfile('new.remmina', { name: 'Fresh', protocol: 'SSH' });
-        monitors.at(-1).fire();
-        runTimeouts();
-        await settle();
+        monitorOn(FLATPAK_DATA).fire();
+        await flush();
 
         expect(store.profiles.map(p => p.name)).toEqual(['Fresh']);
     });
@@ -200,9 +214,8 @@ describe('watching', () => {
         expect(store.profiles).toHaveLength(1);
 
         fs.remove(`${FLATPAK_DATA}/gone.remmina`);
-        monitors.at(-1).fire();
-        runTimeouts();
-        await settle();
+        monitorOn(FLATPAK_DATA).fire();
+        await flush();
 
         expect(store.profiles).toEqual([]);
     });
@@ -212,7 +225,7 @@ describe('watching', () => {
         const store = await newStore();
 
         const scan = vi.spyOn(Gio.File.prototype, 'enumerate_children_async');
-        const monitor = monitors.at(-1);
+        const monitor = monitorOn(FLATPAK_DATA);
 
         // Remmina rewrites a profile in several steps when it saves.
         for (let i = 0; i < 5; i++) monitor.fire();
@@ -267,6 +280,141 @@ describe('watching', () => {
     });
 });
 
+describe('recovering when Remmina appears later', () => {
+    it('picks up a Flatpak installed after the extension', async () => {
+        // The first Flatpak launch creates the data directory. Without a watch
+        // on where detection looks, the menu said "Remmina not found" until
+        // the next login.
+        fs.mkdir(`${HOME}/.var/app`);
+        const store = await newStore();
+        expect(store.source).toBe('none');
+
+        fs.mkdir(FLATPAK_DATA);
+        writeProfile('first.remmina', { name: 'First' });
+        monitorOn(`${HOME}/.var/app`).fire('org.remmina.Remmina');
+        await flush();
+
+        expect(store.source).toBe('flatpak');
+        expect(store.profiles.map(p => p.name)).toEqual(['First']);
+        expect(monitorOn(FLATPAK_DATA)).toBeDefined();
+    });
+
+    it('follows a datadir_path set in remmina.pref later', async () => {
+        fs.mkdir(FLATPAK_DATA);
+        fs.mkdir(FLATPAK_CONFIG);
+        fs.write('/srv/profiles/x.remmina', '[remmina]\nname=Moved\n');
+        const store = await newStore();
+        expect(store.source).toBe('flatpak');
+
+        fs.write(
+            `${FLATPAK_CONFIG}/remmina.pref`,
+            '[remmina_pref]\ndatadir_path=/srv/profiles\n',
+        );
+        monitorOn(FLATPAK_CONFIG).fire('remmina.pref');
+        await flush();
+
+        expect(store.source).toBe('datadir');
+        expect(store.profiles.map(p => p.name)).toEqual(['Moved']);
+    });
+
+    it('ignores unrelated events next to where it looks', async () => {
+        // The nearest existing ancestor can be the home directory itself,
+        // which other programs write to all the time.
+        const store = await newStore();
+        const detect = vi.spyOn(Gio.File.prototype, 'query_info_async');
+
+        monitorOn(HOME).fire('.bash_history');
+        await flush();
+
+        expect(detect).not.toHaveBeenCalled();
+        detect.mockRestore();
+        expect(store.source).toBe('none');
+    });
+
+    it('stops watching where detection looks once an override decides', async () => {
+        const settings = new FakeSettings();
+        await newStore(settings);
+        expect(monitorOn(HOME)).toBeDefined();
+
+        fs.mkdir('/srv/set');
+        settings.set_string('profile-dir', '/srv/set');
+        await flush();
+
+        expect(monitors.filter(monitor => !monitor.cancelled).map(m => m.path)).toEqual(
+            ['/srv/set'],
+        );
+    });
+});
+
+describe('overlapping resolves', () => {
+    it('lets the newest win even when an older one finishes last', async () => {
+        // The preferences window writes profile-dir on every keystroke. A
+        // resolve that started earlier but took longer — automatic detection
+        // probes more than an override does — must not land on top.
+        fs.mkdir(FLATPAK_DATA);
+        fs.mkdir('/srv/typed');
+        const settings = new FakeSettings();
+        const store = new ProfileStore(settings);
+
+        settings.values.set('profile-dir', '/srv/typed');
+        store.reload();
+        await settle();
+
+        expect(store._directory).toBe('/srv/typed');
+        expect(store.source).toBe('override');
+    });
+
+    it('waits for typing to stop before resolving', async () => {
+        fs.mkdir(FLATPAK_DATA);
+        const settings = new FakeSettings();
+        const store = await newStore(settings);
+        const resolve = vi.spyOn(store, 'reload');
+
+        for (const typed of ['/', '/s', '/sr', '/srv'])
+            settings.set_string('profile-dir', typed);
+        expect(resolve).not.toHaveBeenCalled();
+
+        await flush();
+
+        expect(resolve).toHaveBeenCalledTimes(1);
+        expect(store._directory).toBe('/srv');
+    });
+});
+
+describe('the changed signal', () => {
+    it('fires once when a resolve moves the source and the profiles together', async () => {
+        fs.mkdir(FLATPAK_DATA);
+        writeProfile('a.remmina', { name: 'A' });
+        const settings = new FakeSettings();
+        const store = await newStore(settings);
+
+        let changes = 0;
+        store.connect('changed', () => changes++);
+
+        settings.set_string('profile-dir', '/srv/empty');
+        await flush();
+
+        expect(store.source).toBe('override');
+        expect(store.profiles).toEqual([]);
+        expect(changes).toBe(1);
+    });
+
+    it('fires when only the source moved, so the empty-list message updates', async () => {
+        const settings = new FakeSettings();
+        const store = await newStore(settings);
+        expect(store.source).toBe('none');
+
+        let changes = 0;
+        store.connect('changed', () => changes++);
+
+        settings.set_string('profile-dir', 'relative/path');
+        await flush();
+
+        expect(store.source).toBe('invalid');
+        expect(changes).toBe(1);
+    });
+});
+
 describe('settings changes', () => {
     it('re-resolves and moves the watch when profile-dir changes', async () => {
         fs.mkdir(FLATPAK_DATA);
@@ -275,14 +423,15 @@ describe('settings changes', () => {
 
         const settings = new FakeSettings();
         const store = await newStore(settings);
-        expect(store.directory).toBe(FLATPAK_DATA);
+        expect(store._directory).toBe(FLATPAK_DATA);
 
         settings.set_string('profile-dir', '/srv/elsewhere');
-        await settle();
+        await flush();
 
-        expect(store.directory).toBe('/srv/elsewhere');
+        expect(store._directory).toBe('/srv/elsewhere');
         expect(store.source).toBe('override');
-        expect(monitors.at(-1).path).toBe('/srv/elsewhere');
+        expect(monitorOn('/srv/elsewhere')).toBeDefined();
+        expect(monitorOn(FLATPAK_DATA)).toBeUndefined();
         expect(store.profiles.map(p => p.name)).toEqual(['Elsewhere']);
     });
 });
@@ -293,15 +442,19 @@ describe('destroy', () => {
         const settings = new FakeSettings();
         const store = await newStore(settings);
 
-        const monitor = monitors.at(-1);
-        monitor.fire();
-        expect(timeouts.size).toBe(1);
+        const handed = [...monitors];
+        expect(handed.length).toBeGreaterThan(1);
+        monitorOn(FLATPAK_DATA).fire();
+        settings.set_string('profile-dir', '/elsewhere');
+        expect(timeouts.size).toBe(2);
 
         store.destroy();
 
         expect(settings.handlerCount).toBe(0);
-        expect(monitor.handlerCount).toBe(0);
-        expect(monitor.cancelled).toBe(true);
+        for (const monitor of handed) {
+            expect(monitor.handlerCount).toBe(0);
+            expect(monitor.cancelled).toBe(true);
+        }
         expect(timeouts.size).toBe(0);
         expect(store.profiles).toEqual([]);
     });
@@ -309,14 +462,13 @@ describe('destroy', () => {
     it('is inert afterwards, even if a late event arrives', async () => {
         fs.mkdir(FLATPAK_DATA);
         const store = await newStore();
-        const monitor = monitors.at(-1);
+        const monitor = monitorOn(FLATPAK_DATA);
 
         store.destroy();
 
         writeProfile('late.remmina', { name: 'Too late' });
         monitor.fire();
-        runTimeouts();
-        await settle();
+        await flush();
 
         expect(store.profiles).toEqual([]);
     });
@@ -343,8 +495,7 @@ describe('scanning hygiene', () => {
 
     it('skips an implausibly large file rather than reading it', async () => {
         writeProfile('normal.remmina', { name: 'Normal' });
-        // A stray backup or a symlink to something enormous must not be pulled
-        // into the compositor process.
+        // A stray backup must not be pulled into the compositor process.
         fs.write(
             `${FLATPAK_DATA}/huge.remmina`,
             '[remmina]\nname=Huge\n',
@@ -354,6 +505,46 @@ describe('scanning hygiene', () => {
         const store = await newStore();
 
         expect(store.profiles.map(p => p.name)).toEqual(['Normal']);
+    });
+
+    it('stops reading a file that turns out larger than it was listed', async () => {
+        // The listing is not the last word: a file can grow between being
+        // listed and being read. The read itself is capped too.
+        writeProfile('normal.remmina', { name: 'Normal' });
+        fs.write(
+            `${FLATPAK_DATA}/grows.remmina`,
+            `[remmina]\nname=Grows\n#${'x'.repeat(300 * 1024)}\n`,
+            20,
+        );
+
+        const store = await newStore();
+
+        expect(store.profiles.map(p => p.name)).toEqual(['Normal']);
+    });
+
+    it('never opens a FIFO or a device named like a profile', async () => {
+        // Gio lists both as FileType.SPECIAL with size 0, so a size cap alone
+        // lets them through. A link to /dev/zero would then be read until
+        // gnome-shell ran out of memory, and a FIFO would block a GIO worker
+        // thread forever.
+        writeProfile('normal.remmina', { name: 'Normal' });
+        fs.special(`${FLATPAK_DATA}/fifo.remmina`);
+        fs.special('/dev/zero');
+        fs.symlink(`${FLATPAK_DATA}/zero.remmina`, '/dev/zero');
+
+        const store = await newStore();
+
+        expect(store.profiles.map(p => p.name)).toEqual(['Normal']);
+        expect(fs.openedSpecial).toEqual([]);
+    });
+
+    it('still follows a symlink to a regular profile', async () => {
+        fs.write('/srv/shared/team.remmina', '[remmina]\nname=Shared\n');
+        fs.symlink(`${FLATPAK_DATA}/team.remmina`, '/srv/shared/team.remmina');
+
+        const store = await newStore();
+
+        expect(store.profiles.map(p => p.name)).toEqual(['Shared']);
     });
 
     it('keeps the rest of the list when one profile cannot be read', async () => {
@@ -377,9 +568,8 @@ describe('scanning hygiene', () => {
         // not exist yet, so unrelated events are the normal case, not the
         // exception. Rebuilding on those drops hover and focus under the mouse.
         for (let i = 0; i < 3; i++) {
-            monitors.at(-1).fire();
-            runTimeouts();
-            await settle();
+            monitorOn(FLATPAK_DATA).fire();
+            await flush();
         }
 
         expect(notifications).toBe(0);
@@ -394,9 +584,8 @@ describe('scanning hygiene', () => {
         store.connect('notify::profiles', () => notifications++);
 
         writeProfile('b.remmina', { name: 'New' });
-        monitors.at(-1).fire();
-        runTimeouts();
-        await settle();
+        monitorOn(FLATPAK_DATA).fire();
+        await flush();
 
         expect(notifications).toBe(1);
         expect(store.profiles.map(p => p.name)).toEqual(['New', 'Stable']);

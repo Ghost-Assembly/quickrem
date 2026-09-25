@@ -7,10 +7,12 @@
 
 import { SignalEmitter } from './gi-gobject.js';
 
-/** The error domain Gio raises file errors in. */
-const IO_ERROR_QUARK = 'g-io-error-quark';
-
-export const IOErrorEnum = { NOT_FOUND: 1, CANCELLED: 19, PERMISSION_DENIED: 2 };
+export const IOErrorEnum = {
+    NOT_FOUND: 1,
+    IS_DIRECTORY: 3,
+    PERMISSION_DENIED: 14,
+    CANCELLED: 19,
+};
 
 /** A GLib.Error as GJS presents it: an Error that can be asked what it is. */
 export class GioError extends Error {
@@ -20,17 +22,21 @@ export class GioError extends Error {
      */
     constructor(code, message) {
         super(message);
-        this.domain = IO_ERROR_QUARK;
         this.code = code;
     }
 
     /**
-     * @param {string} domain Error domain to test against.
+     * GJS accepts the error enum itself as the domain — Gio code writes
+     * `error.matches(Gio.IOErrorEnum, code)` — so that is what is compared.
+     * This once compared against a quark string no caller could pass, and
+     * every NOT_FOUND and CANCELLED branch in the store was unreachable here.
+     *
+     * @param {object} domain Error enum to test against.
      * @param {number} code Error code to test against.
      * @returns {boolean} Whether this error is that one.
      */
     matches(domain, code) {
-        return this.domain === domain && this.code === code;
+        return domain === IOErrorEnum && this.code === code;
     }
 }
 
@@ -47,16 +53,26 @@ function parentOf(path) {
 
 /** The in-memory filesystem. Tests drive this directly. */
 export const fs = {
-    /** @type {Map<string, {type: string, text: string}>} */
+    /**
+     * Entry types: 'dir', 'file', 'special' (a FIFO or a device node: what
+     * Gio reports as FileType.SPECIAL) and 'link' (a symlink, followed the way
+     * the enumerator and query_info follow one).
+     *
+     * @type {Map<string, {type: string, text: string, size: number}>}
+     */
     entries: new Map(),
 
     /** Paths that exist but refuse to be read. */
     unreadable: new Set(),
 
+    /** Special files something opened, which the real platform punishes. */
+    openedSpecial: [],
+
     /** Empty the filesystem, leaving only the root. */
     reset() {
         this.entries.clear();
         this.unreadable.clear();
+        this.openedSpecial.length = 0;
         this.entries.set('/', { type: 'dir', text: '' });
     },
 
@@ -79,6 +95,47 @@ export const fs = {
             text,
             size: size ?? text.length,
         });
+    },
+
+    /**
+     * @param {string} path An executable file to create, as a package would.
+     */
+    program(path) {
+        this.write(path, '');
+        this.entries.get(path).executable = true;
+    },
+
+    /**
+     * A FIFO or a device node. Gio lists it with size 0, and reading it never
+     * ends — /dev/zero has no end, and a FIFO blocks until a writer appears —
+     * so the stream this hands out yields data forever, as /dev/zero does.
+     *
+     * @param {string} path Where to create it.
+     */
+    special(path) {
+        this.mkdir(parentOf(path));
+        this.entries.set(path, { type: 'special', text: '', size: 0 });
+    },
+
+    /**
+     * @param {string} path Where the link lives.
+     * @param {string} target What it points at.
+     */
+    symlink(path, target) {
+        this.mkdir(parentOf(path));
+        this.entries.set(path, { type: 'link', target });
+    },
+
+    /**
+     * @param {string} path Any path.
+     * @returns {object|undefined} The entry there, with symlinks followed.
+     */
+    resolve(path) {
+        let entry = this.entries.get(path);
+        for (let hops = 0; entry?.type === 'link' && hops < 40; hops++)
+            entry = this.entries.get(entry.target);
+
+        return entry?.type === 'link' ? undefined : entry;
     },
 
     /**
@@ -166,21 +223,28 @@ class Cancellable {
     }
 }
 
+const FileType = { UNKNOWN: 0, REGULAR: 1, DIRECTORY: 2, SYMBOLIC_LINK: 3, SPECIAL: 4 };
+
+/** What Gio reports for each of the stub's entry types. */
+const FILE_TYPES = new Map([
+    ['dir', FileType.DIRECTORY],
+    ['file', FileType.REGULAR],
+    ['special', FileType.SPECIAL],
+]);
+
 class FileInfo {
     /**
      * @param {string} name Basename.
-     * @param {string} type 'dir' or 'file'.
-     * @param {number} size Size in bytes.
+     * @param {object} entry The filesystem entry, symlinks already followed.
      */
-    constructor(name, type, size) {
+    constructor(name, entry) {
         this._name = name;
-        this._type = type;
-        this._size = size;
+        this._entry = entry;
     }
 
     /** @returns {number} Size in bytes. */
     get_size() {
-        return this._size;
+        return this._entry.size ?? this._entry.text?.length ?? 0;
     }
 
     /** @returns {string} The basename. */
@@ -190,7 +254,15 @@ class FileInfo {
 
     /** @returns {number} A FileType member. */
     get_file_type() {
-        return this._type === 'dir' ? FileType.DIRECTORY : FileType.REGULAR;
+        return FILE_TYPES.get(this._entry.type) ?? FileType.UNKNOWN;
+    }
+
+    /**
+     * @param {string} attribute Only access::can-execute is modeled.
+     * @returns {boolean} Its value.
+     */
+    get_attribute_boolean(attribute) {
+        return attribute === 'access::can-execute' && this._entry.executable === true;
     }
 }
 
@@ -211,21 +283,77 @@ class FileEnumerator {
     async next_files_async(count, _priority, cancellable) {
         throwIfCanceled(cancellable);
 
-        return this._paths.splice(0, count).map(path => {
-            const name = path.slice(path.lastIndexOf('/') + 1);
-            const entry = fs.entries.get(path);
-            return new FileInfo(
-                name,
-                entry?.type ?? 'file',
-                entry?.size ?? entry?.text?.length ?? 0,
-            );
-        });
+        // As the real enumerator with FileQueryInfoFlags.NONE: symlinks are
+        // followed, and a dangling one is skipped.
+        return this._paths
+            .splice(0, count)
+            .map(path => [path.slice(path.lastIndexOf('/') + 1), fs.resolve(path)])
+            .filter(([, entry]) => entry !== undefined)
+            .map(([name, entry]) => new FileInfo(name, entry));
     }
 
-    /** Release the handle, as the real enumerator requires. */
-    close() {
+    /**
+     * Release the handle, as the real enumerator requires.
+     *
+     * @returns {Promise<boolean>} Always true.
+     */
+    async close_async() {
         this.closed = true;
         closedEnumerators.push(this);
+        return true;
+    }
+}
+
+/** A GLib.Bytes as GJS presents it. */
+class Bytes {
+    /**
+     * @param {Uint8Array} data Contents.
+     */
+    constructor(data) {
+        this._data = data;
+    }
+
+    /** @returns {Uint8Array} The contents. */
+    toArray() {
+        return this._data;
+    }
+}
+
+class InputStream {
+    /**
+     * @param {object} entry What was opened.
+     */
+    constructor(entry) {
+        this._special = entry.type === 'special';
+        this._data = new TextEncoder().encode(entry.text ?? '');
+        this._offset = 0;
+    }
+
+    /**
+     * @param {number} count Most bytes to return.
+     * @param {number} _priority Ignored.
+     * @param {object|null} cancellable Canceled when superseded.
+     * @returns {Promise<Bytes>} The next bytes, empty at the end.
+     */
+    async read_bytes_async(count, _priority, cancellable) {
+        throwIfCanceled(cancellable);
+
+        // A device node never runs out. Short reads are allowed and real, so
+        // a file is handed out in small pieces to keep callers honest.
+        if (this._special) return new Bytes(new Uint8Array(Math.min(count, 4096)));
+
+        const chunk = this._data.slice(
+            this._offset,
+            this._offset + Math.min(count, 1024),
+        );
+        this._offset += chunk.length;
+        return new Bytes(chunk);
+    }
+
+    /** @returns {Promise<boolean>} Always true. */
+    async close_async() {
+        this.closed = true;
+        return true;
     }
 }
 
@@ -244,11 +372,22 @@ class FileMonitor extends SignalEmitter {
         this.cancelled = true;
     }
 
-    /** Fire a `changed` event, as the real monitor would on a write. */
-    fire() {
-        this.emit('changed');
+    /**
+     * Fire a `changed` event, as the real monitor would on a write.
+     *
+     * @param {string} [name] Basename of the child that changed; the real
+     *   monitor always names one. Defaults to a file nobody cares about.
+     */
+    fire(name = 'unrelated') {
+        this.emit('changed', new GioFile(`${this.path}/${name}`), null, 1);
     }
 }
+
+/**
+ * Bytes g_filename_to_uri leaves alone in a path, from GLib's gconvert.c; every
+ * other byte of the UTF-8 encoding is percent-encoded.
+ */
+const URI_SAFE = /^[A-Za-z0-9!$&'()*+,\-./:=@_~]$/;
 
 class GioFile {
     /**
@@ -263,20 +402,24 @@ class GioFile {
         return this.path;
     }
 
-    /** @returns {string} A file:// URI. */
+    /** @returns {string} A file:// URI, escaped as GLib escapes it. */
     get_uri() {
-        return `file://${this.path}`;
+        let escaped = '';
+        for (const byte of new TextEncoder().encode(this.path)) {
+            const char = String.fromCharCode(byte);
+            escaped +=
+                byte < 0x80 && URI_SAFE.test(char)
+                    ? char
+                    : `%${byte.toString(16).toUpperCase().padStart(2, '0')}`;
+        }
+
+        return `file://${escaped}`;
     }
 
     /** @returns {GioFile|null} The parent, or null at the root. */
     get_parent() {
         const parent = parentOf(this.path);
         return parent ? new GioFile(parent) : null;
-    }
-
-    /** @returns {boolean} Whether anything is at this path. */
-    query_exists() {
-        return fs.entries.has(this.path);
     }
 
     /**
@@ -290,6 +433,44 @@ class GioFile {
     }
 
     /**
+     * @param {string} _attributes Ignored; every modeled attribute is filled.
+     * @param {number} _flags Ignored; symlinks are always followed.
+     * @param {number} _priority Ignored.
+     * @param {object|null} cancellable Canceled when superseded.
+     * @returns {Promise<FileInfo>} What is at this path.
+     */
+    async query_info_async(_attributes, _flags, _priority, cancellable) {
+        throwIfCanceled(cancellable);
+
+        const entry = fs.resolve(this.path);
+        if (!entry)
+            throw new GioError(IOErrorEnum.NOT_FOUND, `${this.path} does not exist`);
+
+        return new FileInfo(this.path.slice(this.path.lastIndexOf('/') + 1), entry);
+    }
+
+    /**
+     * @param {number} _priority Ignored.
+     * @param {object|null} cancellable Canceled when superseded.
+     * @returns {Promise<InputStream>} A stream over the contents.
+     */
+    async read_async(_priority, cancellable) {
+        throwIfCanceled(cancellable);
+
+        if (fs.unreadable.has(this.path))
+            throw new GioError(IOErrorEnum.PERMISSION_DENIED, `${this.path} denied`);
+
+        const entry = fs.resolve(this.path);
+        if (!entry)
+            throw new GioError(IOErrorEnum.NOT_FOUND, `${this.path} does not exist`);
+        if (entry.type === 'dir')
+            throw new GioError(IOErrorEnum.IS_DIRECTORY, `${this.path} is a directory`);
+        if (entry.type === 'special') fs.openedSpecial.push(this.path);
+
+        return new InputStream(entry);
+    }
+
+    /**
      * @param {string} _attributes Ignored.
      * @param {number} _flags Ignored.
      * @param {number} _priority Ignored.
@@ -299,7 +480,7 @@ class GioFile {
     async enumerate_children_async(_attributes, _flags, _priority, cancellable) {
         throwIfCanceled(cancellable);
 
-        const entry = fs.entries.get(this.path);
+        const entry = fs.resolve(this.path);
         if (!entry || entry.type !== 'dir')
             throw new GioError(IOErrorEnum.NOT_FOUND, `${this.path} does not exist`);
 
@@ -307,54 +488,7 @@ class GioFile {
         enumerators.push(enumerator);
         return enumerator;
     }
-
-    /**
-     * The synchronous read. Deliberately a different shape from the async one:
-     * load_contents returns (ok, contents, etag) while the promisified
-     * load_contents_async drops the boolean. prefs.js relies on that.
-     *
-     * @returns {[boolean, Uint8Array, string]} Success, contents and etag.
-     */
-    load_contents() {
-        if (fs.unreadable.has(this.path))
-            throw new GioError(IOErrorEnum.PERMISSION_DENIED, `${this.path} denied`);
-
-        const entry = fs.entries.get(this.path);
-        if (!entry || entry.type !== 'file')
-            throw new GioError(IOErrorEnum.NOT_FOUND, `${this.path} does not exist`);
-
-        return [true, new TextEncoder().encode(entry.text), 'etag'];
-    }
-
-    /**
-     * Matches the real promisified signature, which resolves to
-     * [contents, etag] — the boolean the synchronous call returns is dropped.
-     *
-     * @param {object|null} cancellable Canceled when superseded.
-     * @returns {Promise<[Uint8Array, string]>} Contents and etag.
-     */
-    async load_contents_async(cancellable) {
-        throwIfCanceled(cancellable);
-
-        if (fs.unreadable.has(this.path))
-            throw new GioError(IOErrorEnum.PERMISSION_DENIED, `${this.path} denied`);
-
-        const entry = fs.entries.get(this.path);
-        if (!entry || entry.type !== 'file')
-            throw new GioError(IOErrorEnum.NOT_FOUND, `${this.path} does not exist`);
-
-        return [new TextEncoder().encode(entry.text), 'etag'];
-    }
 }
-
-// modules/store.js promisifies these, and skips any that already has an
-// `_original_` recorded. The stub's versions already return promises, so the
-// markers keep _promisify away from them.
-GioFile.prototype._original_enumerate_children_async = () => {};
-GioFile.prototype._original_load_contents_async = () => {};
-FileEnumerator.prototype._original_next_files_async = () => {};
-
-const FileType = { REGULAR: 1, DIRECTORY: 2 };
 
 export default {
     IOErrorEnum,
@@ -373,7 +507,14 @@ export default {
     }),
 
     FileEnumerator,
+    InputStream,
     Cancellable,
+
+    /**
+     * @param {string} name An icon name or path.
+     * @returns {object} A stand-in for the Gio.Icon.
+     */
+    icon_new_for_string: name => ({ name }),
 
     AppInfo: {
         /**
@@ -395,8 +536,23 @@ export default {
         },
     },
 
-    /** Never reached: everything the store promisifies is already a promise. */
-    _promisify() {
-        throw new Error('gi-gio stub: _promisify should not be called');
+    /**
+     * As GJS's: record the original under `_original_<name>` and return early
+     * when one is already there. The stub's methods already return promises,
+     * so there is nothing to wrap.
+     *
+     * @param {object} proto Prototype to patch.
+     * @param {string} name Name of the `*_async` method.
+     */
+    _promisify(proto, name) {
+        // Reflect rather than brackets: a computed key is the shape
+        // eslint-plugin-security flags, even when the key is a literal.
+        const method = Reflect.get(proto, name);
+        if (method === undefined) throw new Error(`${proto} has no method ${name}`);
+
+        const original = `_original_${name}`;
+        if (Reflect.get(proto, original) !== undefined) return;
+
+        Reflect.set(proto, original, method);
     },
 };

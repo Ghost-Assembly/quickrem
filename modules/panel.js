@@ -1,8 +1,8 @@
 // The UI layer: the Quick Settings tile, its menu, and launching.
 //
 // The only file in QuickRem that touches St, Main or QuickSettings. It holds no
-// profile state of its own — the store owns that, and this rebuilds from
-// `notify::profiles`.
+// profile state of its own — the store owns that, and this rebuilds on the
+// store's `changed` signal.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
@@ -10,6 +10,7 @@ import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
+import { ensureActorVisibleInScrollView } from 'resource:///org/gnome/shell/misc/animationUtils.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
@@ -54,7 +55,6 @@ class ProfileSection extends PopupMenu.PopupMenuSection {
         super();
 
         this.actor = new St.ScrollView({
-            style_class: 'quickrem-profile-list',
             hscrollbar_policy: St.PolicyType.NEVER,
             vscrollbar_policy: St.PolicyType.NEVER,
             clip_to_allocation: true,
@@ -63,39 +63,29 @@ class ProfileSection extends PopupMenu.PopupMenuSection {
         this.actor._delegate = this;
     }
 
-    /**
-     * Keep a focused row in view.
-     *
-     * St.ScrollView does not follow keyboard focus on its own — measured on a
-     * list of forty, focusing the twenty-sixth row left the scroll position at
-     * zero — so arrowing down past the visible rows moved the selection
-     * off-screen with nothing to show for it.
-     *
-     * @param {object} item The menu item that just took focus.
-     */
-    scrollToItem(item) {
-        const adjustment = this.actor.vadjustment;
-        const [value, , , , , pageSize] = adjustment.get_values();
-        const box = item.get_allocation_box();
-
-        if (box.y1 < value) adjustment.set_value(box.y1);
-        else if (box.y2 > value + pageSize) adjustment.set_value(box.y2 - pageSize);
-    }
-
     addMenuItem(menuItem, position) {
         super.addMenuItem(menuItem, position);
 
+        // St.ScrollView does not follow keyboard focus on its own — measured
+        // on a list of forty, focusing the twenty-sixth row left the scroll
+        // position at zero — so arrowing past the visible rows moved the
+        // selection off-screen. The Shell's own helper is what its other
+        // scrolling lists use for this.
+        //
         // The handler dies with the item, and every item is destroyed on the
         // next rebuild, so there is nothing here to disconnect by hand.
-        menuItem.connect('key-focus-in', () => this.scrollToItem(menuItem));
+        menuItem.connect('key-focus-in', () =>
+            ensureActorVisibleInScrollView(this.actor, menuItem),
+        );
     }
 
     /**
      * Re-cap the list against the current screen and show the scrollbar only
      * when there is something to scroll.
      *
-     * Called on every rebuild and on every menu open, which covers a monitor
-     * change or a text-scaling change without watching for either.
+     * Called on a rebuild while the menu is open and just before every open,
+     * which covers a monitor change or a text-scaling change without watching
+     * for either.
      */
     updateHeight() {
         const monitor = Main.layoutManager.primaryMonitor;
@@ -107,12 +97,16 @@ class ProfileSection extends PopupMenu.PopupMenuSection {
             Math.round(workArea.height * LIST_MAX_HEIGHT_FRACTION),
         );
 
-        // A max-height on the scroll view is what makes it scroll at all; St
-        // otherwise gives it whatever its contents ask for.
-        this.actor.style = `max-height: ${max}px;`;
-
         const [, natural] = this.box.get_preferred_height(-1);
         const scrolls = natural > max;
+
+        // A max-height on the scroll view is what makes it scroll at all; St
+        // otherwise gives it whatever its contents ask for. The min-height is
+        // for the menu's open animation, which eases to the menu's *minimum*
+        // height: a scroll view that may scroll reports a minimum of about
+        // zero, and the menu opened to its header and footer and then jumped
+        // to full height once the animation ended.
+        this.actor.style = `max-height: ${max}px; min-height: ${Math.min(natural, max)}px;`;
 
         // AUTOMATIC always reserves width for a scrollbar, which looks wrong
         // when there is nothing to scroll, so it is turned on only when needed.
@@ -185,12 +179,12 @@ const RemminaToggle = GObject.registerClass(
          */
         constructor(extension, store, settings, gicon) {
             super({
-                title: _('Remmina'),
+                // A product name, so not marked for translation.
+                title: 'Remmina',
                 gicon,
                 // There is no boolean state to toggle — the tile is a way into
                 // a list, not a switch — so the checked state is never used.
                 toggleMode: false,
-                menuEnabled: true,
             });
 
             this._extension = extension;
@@ -203,18 +197,32 @@ const RemminaToggle = GObject.registerClass(
             // when clicked in the middle reads as broken, so both open it.
             this.connectObject('clicked', () => this.menu.open(), this);
 
-            this.menu.setHeader(gicon, _('Remmina'));
+            this.menu.setHeader(gicon, 'Remmina');
 
             this._section = new ProfileSection();
             this.menu.addMenuItem(this._section);
 
-            // Re-measured on open as well as on rebuild, so moving the Shell to
-            // a different monitor or changing text scaling is picked up without
-            // watching for either.
+            // The list is capped just before the menu opens, not in
+            // open-state-changed: QuickToggleMenu.open() measures the height to
+            // animate to and only then emits that signal, so a cap applied
+            // there was always one open late. Measured in a headless Shell, the
+            // first open animated to 1666px and settled at 710px. There is no
+            // signal before the measurement and the class is not exported to
+            // subclass, so the instance's open() is wrapped; it goes with the
+            // menu when the menu is destroyed.
+            const open = this.menu.open.bind(this.menu);
+            this.menu.open = animate => {
+                if (!this.menu.isOpen) this._section.updateHeight();
+                open(animate);
+            };
+
+            // Opening the menu is the one moment someone is looking at "Remmina
+            // not found", and a native install cannot be watched for: it lands
+            // on PATH. So that is when detection runs again.
             this.menu.connectObject(
                 'open-state-changed',
-                (_menu, open) => {
-                    if (open) this._section.updateHeight();
+                (_menu, isOpen) => {
+                    if (isOpen && this._store.source === 'none') this._store.reload();
                 },
                 this,
             );
@@ -232,16 +240,11 @@ const RemminaToggle = GObject.registerClass(
                 ),
             );
 
-            // How the directory was chosen matters as well as the contents:
-            // `source === 'none'` is what tells an empty list apart from a
-            // missing Remmina, and _emptyItem() switches on it.
-            store.connectObject(
-                'notify::profiles',
-                () => this._rebuild(),
-                'notify::source',
-                () => this._rebuild(),
-                this,
-            );
+            // `changed` covers the profiles and how the directory was chosen
+            // — `source` is what tells an empty list apart from a missing
+            // Remmina, and _emptyItem() switches on it — and fires once when
+            // both move, so a resolve rebuilds the menu once rather than twice.
+            store.connectObject('changed', () => this._rebuild(), this);
 
             this._rebuild();
         }
@@ -254,8 +257,10 @@ const RemminaToggle = GObject.registerClass(
         /**
          * Wire an item so activating it closes the panel and does one thing.
          *
-         * Every item in this menu wants that pair, and the `this` detach
-         * argument has to be passed each time or the handler outlives the item.
+         * Every item in this menu wants that pair. connectObject() ties the
+         * handler to both the item and this toggle, and the Shell's signal
+         * tracker releases it when either is destroyed, so nothing here has
+         * to disconnect it by hand.
          *
          * @param {object} item A menu item.
          * @param {Function} action What activating it should do.
@@ -287,7 +292,7 @@ const RemminaToggle = GObject.registerClass(
                     : '';
 
             this.subtitle = subtitle;
-            this.menu.setHeader(this._gicon, _('Remmina'), subtitle);
+            this.menu.setHeader(this._gicon, 'Remmina', subtitle);
 
             if (profiles.length === 0) {
                 this._section.addMenuItem(this._emptyItem());
@@ -303,9 +308,9 @@ const RemminaToggle = GObject.registerClass(
 
             // updateHeight() measures every row, and the rebuild above has just
             // invalidated the box. While the menu is shut nobody can see the
-            // result and the open-state handler measures again on the way in,
-            // so the work is left to then. (PopupMenuSection.isOpen is
-            // hardcoded true, so the real menu has to be the one asked.)
+            // result and open() measures again on the way in, so the work is
+            // left to then. (PopupMenuSection.isOpen is hardcoded true, so the
+            // real menu has to be the one asked.)
             if (this.menu.isOpen) this._section.updateHeight();
         }
 
@@ -321,6 +326,15 @@ const RemminaToggle = GObject.registerClass(
             if (this._store.source === 'none') {
                 return this._onActivate(
                     new PopupMenu.PopupMenuItem(_('Remmina not found')),
+                    () => this._extension.openPreferences(),
+                );
+            }
+
+            if (this._store.source === 'invalid') {
+                return this._onActivate(
+                    new PopupMenu.PopupMenuItem(
+                        _('Profile directory setting is invalid'),
+                    ),
                     () => this._extension.openPreferences(),
                 );
             }
@@ -341,6 +355,13 @@ const RemminaToggle = GObject.registerClass(
             this._extension = null;
             this._settings = null;
             this._section = null;
+
+            // The Shell never destroys a toggle's menu: QuickSettingsMenu
+            // parents menu.actor into its own overlay and nothing in
+            // quickSettings.js destroys it. Left alone, every disable — and
+            // so every screen lock — leaked one menu with its rows and focus
+            // group; measured, the overlay went from 14 children to 15 to 16.
+            this.menu.destroy();
 
             super.destroy();
         }

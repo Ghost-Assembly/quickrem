@@ -1,21 +1,26 @@
 // The data layer: find the profile directory, read it, and keep reading it.
 //
-// Everything here is asynchronous. A profile directory lives on whatever the
-// user's home is mounted from, and a synchronous read of it would block the
-// compositor thread — a stutter in the whole desktop, not just in this menu.
+// Every read and every probe here is asynchronous, through modules/io.js. A
+// profile directory lives on whatever the user's home is mounted from, and a
+// synchronous read of it would block the compositor thread — a stutter in the
+// whole desktop, not just in this menu. The one synchronous call left is
+// monitor_directory(), which GIO has no asynchronous form of; it is made only
+// when a watch moves, on a directory that has just been seen to exist.
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 
 import { detectProfileDir } from './detect.js';
+import { MAX_FILE_BYTES, isIOError, nearestExisting, readText } from './io.js';
 import { parseProfile, sameProfiles, sortProfiles } from './profiles.js';
 import { PROFILE_SUFFIX, joinPath } from './paths.js';
 
 /**
- * Remmina rewrites a profile in several steps when it saves, and a file
- * manager copying profiles in emits an event per file. Coalescing for this long
- * turns either into one rescan.
+ * Remmina rewrites a profile in several steps when it saves, a file manager
+ * copying profiles in emits an event per file, and the preferences window
+ * writes profile-dir on every keystroke. Coalescing for this long turns each of
+ * those into one rescan or one re-resolve.
  */
 const DEBOUNCE_MS = 300;
 
@@ -23,42 +28,25 @@ const DEBOUNCE_MS = 300;
 const BATCH_SIZE = 64;
 
 /**
- * Largest profile worth reading. A .remmina file is a few hundred bytes, so
- * this is three orders of magnitude of headroom. It exists so that something
- * stray in the profile directory — a backup, or a symlink pointing at something
- * enormous — cannot be pulled into the compositor process in its entirety.
+ * @param {string} path An absolute path.
+ * @returns {string} Its parent directory.
  */
-const MAX_PROFILE_BYTES = 256 * 1024;
-
-/** Stateless for these calls, so one is reused rather than one per file read. */
-const DECODER = new TextDecoder();
-
-/**
- * Promisify once, and only if nobody else got there first.
- *
- * These prototypes are shared with the rest of the gnome-shell process, so
- * wrapping an already-wrapped method would leave a double wrapper behind for
- * every other extension too. `_promisify` records the original under
- * `_original_<name>`, which is the cheapest reliable way to ask.
- *
- * @param {object} proto Prototype to patch.
- * @param {string} name Name of the `*_async` method.
- */
-function promisifyOnce(proto, name) {
-    if (proto[`_original_${name}`] === undefined) Gio._promisify(proto, name);
+function parentOf(path) {
+    return path.slice(0, Math.max(1, path.lastIndexOf('/')));
 }
 
-promisifyOnce(Gio.File.prototype, 'enumerate_children_async');
-promisifyOnce(Gio.File.prototype, 'load_contents_async');
-promisifyOnce(Gio.FileEnumerator.prototype, 'next_files_async');
-
 /**
- * @param {Error} error Anything thrown by a Gio call.
- * @param {number} code A Gio.IOErrorEnum member.
- * @returns {boolean} Whether the error is that code.
+ * @param {string|null} changed A path a monitor reported.
+ * @param {Array<string>} targets Paths that matter.
+ * @returns {boolean} Whether the change is to a target or to one of its
+ *   ancestors — the ancestor appearing is how a target starts to exist.
  */
-function isIOError(error, code) {
-    return typeof error?.matches === 'function' && error.matches(Gio.IOErrorEnum, code);
+function touchesAny(changed, targets) {
+    if (!changed) return false;
+
+    return targets.some(
+        target => target === changed || target.startsWith(`${changed}/`),
+    );
 }
 
 export const ProfileStore = GObject.registerClass(
@@ -71,20 +59,21 @@ export const ProfileStore = GObject.registerClass(
                 'Saved Remmina profiles, sorted by name',
                 GObject.ParamFlags.READABLE,
             ),
-            directory: GObject.ParamSpec.string(
-                'directory',
-                'Directory',
-                'Directory profiles are read from, empty when none was found',
-                GObject.ParamFlags.READABLE,
-                '',
-            ),
             source: GObject.ParamSpec.string(
                 'source',
                 'Source',
-                'How the directory was chosen: override, datadir, native, flatpak or none',
+                'How the directory was chosen: override, datadir, native, flatpak, ' +
+                    'none or invalid',
                 GObject.ParamFlags.READABLE,
                 'none',
             ),
+        },
+        Signals: {
+            // One signal for "the menu is out of date", emitted once however
+            // many of the properties above changed. A resolve that moves the
+            // source usually changes the profiles too, and the panel used to
+            // rebuild the menu once for each notification.
+            changed: {},
         },
     },
     class ProfileStore extends GObject.Object {
@@ -98,17 +87,31 @@ export const ProfileStore = GObject.registerClass(
             this._profiles = [];
             this._directory = '';
             this._source = 'none';
+            this._changePending = false;
+
+            // The profile directory, or its nearest existing ancestor.
             this._monitor = null;
             this._watchedPath = null;
-            this._debounceId = 0;
+            this._watchGeneration = 0;
+
+            // Where detection looks, so Remmina being installed, its data
+            // directory appearing or remmina.pref changing re-resolves on its
+            // own. Keyed by the directory watched.
+            this._probeMonitors = new Map();
+            this._probeTargets = [];
+
+            // Pending debounce sources, one per kind of work.
+            this._refreshTimer = { id: 0 };
+            this._resolveTimer = { id: 0 };
             this._cancellable = null;
             this._generation = 0;
+            this._resolveGeneration = 0;
 
             // Pointing profile-dir somewhere else has to move the watch as well
             // as the scan, so it goes through the same path as first startup.
             this._settings.connectObject(
                 'changed::profile-dir',
-                () => this.reload(),
+                () => this._queue(this._resolveTimer, () => this.reload()),
                 this,
             );
 
@@ -120,17 +123,12 @@ export const ProfileStore = GObject.registerClass(
             return this._profiles;
         }
 
-        /** @returns {string} Directory being read, or '' when none was found. */
-        get directory() {
-            return this._directory;
-        }
-
-        /** @returns {string} Why that directory was chosen. */
+        /** @returns {string} Why the directory was chosen. */
         get source() {
             return this._source;
         }
 
-        /** Re-detect the profile directory, re-arm the watch and rescan. */
+        /** Re-detect the profile directory, re-arm the watches and rescan. */
         reload() {
             this._resolve().catch(error =>
                 console.warn(
@@ -151,15 +149,19 @@ export const ProfileStore = GObject.registerClass(
             this._settings = null;
 
             this._unwatch();
+            this._unwatchProbes();
 
-            if (this._debounceId) {
-                GLib.Source.remove(this._debounceId);
-                this._debounceId = 0;
+            for (const timer of [this._refreshTimer, this._resolveTimer]) {
+                if (timer.id) GLib.Source.remove(timer.id);
+                timer.id = 0;
             }
 
-            // Bumping the generation strands any scan already in flight, so its
-            // continuation returns without touching a destroyed object.
+            // Bumping the generations strands any resolve, watch or scan
+            // already in flight, so its continuation returns without touching
+            // a destroyed object.
             this._generation++;
+            this._resolveGeneration++;
+            this._watchGeneration++;
             this._cancellable?.cancel();
             this._cancellable = null;
             this._profiles = [];
@@ -167,31 +169,33 @@ export const ProfileStore = GObject.registerClass(
 
         /** Probe the system, decide on a directory, then watch and scan it. */
         async _resolve() {
-            // The probe and the precedence rules both live in detect.js, so
-            // this and the preferences window cannot drift apart. Only the
-            // reader differs: the Shell must not block the compositor.
-            const { dir, source } = await detectProfileDir({
-                override: this._settings.get_string('profile-dir'),
-                readText: async path => {
-                    const [contents] =
-                        await Gio.File.new_for_path(path).load_contents_async(null);
+            // Resolves overlap whenever profile-dir changes faster than the
+            // probe completes. Only the newest may publish; an older one
+            // landing last would leave the store reading a directory the
+            // setting no longer names.
+            const generation = ++this._resolveGeneration;
 
-                    return DECODER.decode(contents);
-                },
-            });
-            if (!this._settings) return;
+            // The probe and the precedence rules both live in detect.js, so
+            // this and the preferences window cannot drift apart.
+            const { dir, source, watch } = await detectProfileDir(
+                this._settings.get_string('profile-dir'),
+            );
+            if (generation !== this._resolveGeneration) return;
 
             if ((dir ?? '') !== this._directory) {
                 this._directory = dir ?? '';
-                this.notify('directory');
+                this._changePending = true;
             }
 
             if (source !== this._source) {
                 this._source = source;
+                this._changePending = true;
                 this.notify('source');
             }
 
-            this._watch();
+            await Promise.all([this._watch(), this._watchProbes(watch)]);
+            if (generation !== this._resolveGeneration) return;
+
             await this._refresh();
         }
 
@@ -203,30 +207,30 @@ export const ProfileStore = GObject.registerClass(
          * Watching the ancestor means the directory appearing is itself an
          * event, so the list fills in without an enable/disable cycle.
          */
-        _watch() {
+        async _watch() {
+            const generation = ++this._watchGeneration;
             const target = this._directory
-                ? this._nearestExisting(this._directory)
+                ? await nearestExisting(this._directory)
                 : null;
+
+            // A newer call owns the watch now; installing this one as well
+            // would leave a monitor nothing ever cancels.
+            if (generation !== this._watchGeneration) return;
             if (target === this._watchedPath) return;
 
             this._unwatch();
             if (!target) return;
 
-            try {
-                this._monitor = Gio.File.new_for_path(target).monitor_directory(
-                    Gio.FileMonitorFlags.WATCH_MOVES,
-                    null,
-                );
-            } catch (error) {
-                console.warn(`[quickrem] could not watch ${target}: ${error}`);
-                return;
-            }
+            const monitor = this._monitorDirectory(target, () =>
+                this._queue(this._refreshTimer, () => this._onRefreshTimeout()),
+            );
+            if (!monitor) return;
 
+            this._monitor = monitor;
             this._watchedPath = target;
-            this._monitor.connectObject('changed', () => this._queueRefresh(), this);
         }
 
-        /** Drop the file monitor and its handler together. */
+        /** Drop the profile-directory monitor and its handler together. */
         _unwatch() {
             if (!this._monitor) return;
 
@@ -237,37 +241,112 @@ export const ProfileStore = GObject.registerClass(
         }
 
         /**
-         * @param {string} path Directory that may not exist.
-         * @returns {string|null} The deepest existing ancestor, or null.
+         * Watch where detection looks, so its answer can change on its own.
+         *
+         * Without this, a Remmina installed after the extension — or a first
+         * Flatpak launch creating its data directory — left the menu saying
+         * "Remmina not found" until the next login, and a datadir_path set in
+         * Remmina's preferences was never noticed at all. Each target's parent
+         * is watched, or that parent's nearest existing ancestor, and only an
+         * event on a target or on one of its ancestors re-resolves: the
+         * ancestor can be the home directory, which is busy.
+         *
+         * @param {Array<string>} targets Paths from detectProfileDir.
          */
-        _nearestExisting(path) {
-            let file = Gio.File.new_for_path(path);
+        async _watchProbes(targets) {
+            const generation = this._resolveGeneration;
+            const dirs = await Promise.all(
+                targets.map(target => nearestExisting(parentOf(target))),
+            );
+            if (generation !== this._resolveGeneration) return;
 
-            while (file && !file.query_exists(null)) file = file.get_parent();
+            this._probeTargets = targets;
+            const wanted = new Set(dirs.filter(dir => dir !== null));
 
-            return file ? file.get_path() : null;
+            for (const [dir, monitor] of this._probeMonitors) {
+                if (wanted.has(dir)) continue;
+
+                monitor.disconnectObject(this);
+                monitor.cancel();
+                this._probeMonitors.delete(dir);
+            }
+
+            for (const dir of wanted) {
+                if (this._probeMonitors.has(dir)) continue;
+
+                const monitor = this._monitorDirectory(dir, (file, otherFile) => {
+                    const touched = [file, otherFile].some(changed =>
+                        touchesAny(changed?.get_path() ?? null, this._probeTargets),
+                    );
+                    if (touched) this._queue(this._resolveTimer, () => this.reload());
+                });
+                if (monitor) this._probeMonitors.set(dir, monitor);
+            }
         }
 
-        /** Coalesce a burst of file events into one rescan. */
-        _queueRefresh() {
-            if (this._debounceId) GLib.Source.remove(this._debounceId);
+        /** Drop every detection monitor. */
+        _unwatchProbes() {
+            for (const monitor of this._probeMonitors.values()) {
+                monitor.disconnectObject(this);
+                monitor.cancel();
+            }
 
-            this._debounceId = GLib.timeout_add(
-                GLib.PRIORITY_DEFAULT,
-                DEBOUNCE_MS,
-                () => {
-                    this._debounceId = 0;
+            this._probeMonitors.clear();
+            this._probeTargets = [];
+        }
 
-                    // The event may have been the profile directory itself
-                    // being created, so move the watch onto it before scanning.
-                    this._watch();
-                    this._refresh().catch(error =>
-                        console.warn(`[quickrem] rescan failed: ${error}`),
-                    );
+        /**
+         * @param {string} dir Directory to watch.
+         * @param {Function} onChanged Called with the file and other file of
+         *   each event.
+         * @returns {Gio.FileMonitor|null} The monitor, or null when the
+         *   directory could not be watched.
+         */
+        _monitorDirectory(dir, onChanged) {
+            let monitor;
+            try {
+                monitor = Gio.File.new_for_path(dir).monitor_directory(
+                    Gio.FileMonitorFlags.WATCH_MOVES,
+                    null,
+                );
+            } catch (error) {
+                console.warn(`[quickrem] could not watch ${dir}: ${error}`);
+                return null;
+            }
 
-                    return GLib.SOURCE_REMOVE;
-                },
+            monitor.connectObject(
+                'changed',
+                (_monitor, file, otherFile) => onChanged(file, otherFile),
+                this,
             );
+
+            return monitor;
+        }
+
+        /**
+         * Run a callback once a burst of calls has gone quiet.
+         *
+         * @param {{id: number}} timer Holds this debounce's pending source.
+         * @param {Function} callback What to run.
+         */
+        _queue(timer, callback) {
+            if (timer.id) GLib.Source.remove(timer.id);
+
+            timer.id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, DEBOUNCE_MS, () => {
+                timer.id = 0;
+                callback();
+
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+
+        /** A burst of profile-directory events has gone quiet. */
+        _onRefreshTimeout() {
+            // The event may have been the profile directory itself being
+            // created, so move the watch onto it before scanning.
+            this._watch()
+                .then(() => this._refresh())
+                .catch(error => console.warn(`[quickrem] rescan failed: ${error}`));
         }
 
         /** Rescan the directory and publish the result. */
@@ -299,12 +378,20 @@ export const ProfileStore = GObject.registerClass(
             // A rescan that found nothing new must not rebuild the menu: the
             // watch can sit on a busy ancestor while the profile directory does
             // not exist, and tearing the items down under the pointer loses
-            // hover and keyboard focus mid-interaction.
+            // hover and keyboard focus mid-interaction. A resolve that moved
+            // the directory or the source still has to, even when the list
+            // came out the same — the empty-list message depends on the source.
             const sorted = sortProfiles(profiles);
-            if (sameProfiles(sorted, this._profiles)) return;
+            const profilesChanged = !sameProfiles(sorted, this._profiles);
+            if (!profilesChanged && !this._changePending) return;
 
-            this._profiles = sorted;
-            this.notify('profiles');
+            this._changePending = false;
+            if (profilesChanged) {
+                this._profiles = sorted;
+                this.notify('profiles');
+            }
+
+            this.emit('changed');
         }
 
         /**
@@ -335,31 +422,41 @@ export const ProfileStore = GObject.registerClass(
             } finally {
                 // Every scan opens one of these and a watch on a busy directory
                 // can scan often, so the handle is closed here rather than left
-                // for the garbage collector.
-                enumerator.close(null);
+                // for the garbage collector. Not with the scan's cancellable:
+                // a superseded scan still has a descriptor to give back.
+                await enumerator
+                    .close_async(GLib.PRIORITY_DEFAULT, null)
+                    .catch(() => {});
             }
 
             return paths;
         }
 
         /**
-         * @param {Gio.FileInfo} info One directory entry.
+         * @param {Gio.FileInfo} info One directory entry, symlinks followed.
          * @param {string} dir The directory it came from.
          * @returns {string|null} Its path, or null when it is not a profile
          *   worth reading.
          */
         _profilePath(info, dir) {
-            const name = info.get_name();
-            if (!name.endsWith(PROFILE_SUFFIX)) return null;
-            if (info.get_file_type() === Gio.FileType.DIRECTORY) return null;
+            if (!info.get_name().endsWith(PROFILE_SUFFIX)) return null;
 
-            const size = info.get_size();
-            if (size > MAX_PROFILE_BYTES) {
-                console.warn(`[quickrem] skipping ${name}: ${size} bytes`);
+            // Regular files only. The enumerator follows symlinks, so a link
+            // to a profile elsewhere still works, but a FIFO named *.remmina
+            // would block a GIO thread forever and a link to /dev/zero reports
+            // size 0 and would never stop reading. Both are FileType.SPECIAL.
+            if (info.get_file_type() !== Gio.FileType.REGULAR) return null;
+
+            // Checked here as well as while reading, so an oversized file is
+            // not even opened. The read enforces it again for a file that grows.
+            if (info.get_size() > MAX_FILE_BYTES) {
+                console.warn(
+                    `[quickrem] skipping a profile of ${info.get_size()} bytes`,
+                );
                 return null;
             }
 
-            return joinPath(dir, name);
+            return joinPath(dir, info.get_name());
         }
 
         /**
@@ -370,16 +467,15 @@ export const ProfileStore = GObject.registerClass(
          */
         async _readProfile(path, cancellable) {
             try {
-                const [contents] =
-                    await Gio.File.new_for_path(path).load_contents_async(cancellable);
-
-                return parseProfile(DECODER.decode(contents), path);
+                return parseProfile(await readText(path, cancellable), path);
             } catch (error) {
                 if (isIOError(error, Gio.IOErrorEnum.CANCELLED)) throw error;
 
                 // One unreadable profile must not cost the user the rest of
-                // the list.
-                console.warn(`[quickrem] skipping ${path}: ${error}`);
+                // the list. Neither the path nor the error is logged: Remmina's
+                // default filename embeds the server's hostname, GIO's error
+                // messages quote the path, and the journal outlives the file.
+                console.warn('[quickrem] skipping a profile that could not be read');
                 return null;
             }
         }

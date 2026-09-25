@@ -13,6 +13,15 @@
 
 set -euo pipefail
 
+# The system's GLib tools, not whichever are first on PATH. A Homebrew GLib
+# (pulled in as a dependency of something else) ships its own gsettings built
+# without the dconf module: it silently falls back to a keyfile, the value
+# reads back fine from gsettings itself, and the shell under test never sees
+# it — so the extension is never enabled and the check times out with no
+# error. Everything here must speak to the same GLib gnome-shell was built
+# against.
+export PATH="/usr/bin:$PATH"
+
 UUID="quickrem@napalm255.github.io"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TIMEOUT="${TIMEOUT:-60}"
@@ -61,6 +70,15 @@ gsettings set org.gnome.shell enabled-extensions "['$UUID']"
 enabled="$(gsettings get org.gnome.shell enabled-extensions)"
 if [[ "$enabled" != "['$UUID']" ]]; then
     echo "FAIL: dconf is not isolated; enabled-extensions = $enabled" >&2
+    rm -rf "$WORK"
+    exit 1
+fi
+
+# And read it back through dconf itself, not gsettings: a gsettings built
+# without the dconf module writes to a keyfile, reads its own write back and
+# passes the guard above, while the Shell reads dconf and sees nothing.
+if [[ "$(dconf read /org/gnome/shell/enabled-extensions)" != "['$UUID']" ]]; then
+    echo "FAIL: gsettings is not writing to dconf; check which gsettings is on PATH" >&2
     rm -rf "$WORK"
     exit 1
 fi

@@ -10,8 +10,82 @@
 export const env = {
     home: '/home/tester',
     variables: new Map(),
-    programs: new Set(),
 };
+
+/**
+ * GLib.shell_parse_argv, following the rules in GLib's gshell.c rather than
+ * approximating them with a regex — a stub that splits differently from the
+ * real thing makes tests/launch.test.js check the stub. Modeled: blanks
+ * separate words; single quotes are literal; inside double quotes a backslash
+ * escapes only $ ` " \ and newline; outside quotes it escapes any character
+ * and a backslash-newline disappears; `#` at the start of a word comments out
+ * the rest of the line; quoted and unquoted runs join into one word. Errors, as
+ * in GLib: an unmatched quote, a trailing backslash, and text that is empty or
+ * only blanks. tests/launch.test.js pins this against output captured from
+ * the real GLib.shell_parse_argv, so the model cannot drift unnoticed.
+ *
+ * @param {string} command A command line.
+ * @returns {[boolean, Array<string>]} Success and the argument vector.
+ * @throws {Error} On the errors listed above.
+ */
+function shellParseArgv(command) {
+    const argv = [];
+    let word = null;
+    let i = 0;
+
+    const push = char => {
+        word = (word ?? '') + char;
+    };
+
+    while (i < command.length) {
+        const char = command.charAt(i);
+
+        if (char === ' ' || char === '\t' || char === '\n') {
+            if (word !== null) argv.push(word);
+            word = null;
+            i++;
+        } else if (char === '#' && word === null) {
+            while (i < command.length && command.charAt(i) !== '\n') i++;
+        } else if (char === "'") {
+            const end = command.indexOf("'", i + 1);
+            if (end === -1)
+                throw new Error('Text ended before matching quote was found');
+            push(command.slice(i + 1, end));
+            i = end + 1;
+        } else if (char === '"') {
+            i++;
+            push('');
+            for (;;) {
+                if (i >= command.length)
+                    throw new Error('Text ended before matching quote was found');
+                const inner = command.charAt(i);
+                if (inner === '"') break;
+                if (inner === '\\' && '$`"\\\n'.includes(command.charAt(i + 1))) {
+                    if (command.charAt(i + 1) !== '\n') push(command.charAt(i + 1));
+                    i += 2;
+                } else {
+                    push(inner);
+                    i++;
+                }
+            }
+            i++;
+        } else if (char === '\\') {
+            if (i + 1 >= command.length)
+                throw new Error('Text ended just after a “\\” character.');
+            if (command.charAt(i + 1) !== '\n') push(command.charAt(i + 1));
+            i += 2;
+        } else {
+            push(char);
+            i++;
+        }
+    }
+
+    if (word !== null) argv.push(word);
+    if (argv.length === 0)
+        throw new Error('Text was empty (or contained only whitespace)');
+
+    return [true, argv];
+}
 
 /** Pending timeout callbacks, by source id. */
 export const timeouts = new Map();
@@ -30,7 +104,6 @@ export function runTimeouts() {
 export function reset() {
     env.home = '/home/tester';
     env.variables.clear();
-    env.programs.clear();
     timeouts.clear();
     nextSourceId = 1;
 }
@@ -50,12 +123,6 @@ export default {
     getenv: name => env.variables.get(name) ?? null,
 
     /**
-     * @param {string} name Program to look for.
-     * @returns {string|null} A path when the test said it exists.
-     */
-    find_program_in_path: name => (env.programs.has(name) ? `/usr/bin/${name}` : null),
-
-    /**
      * @param {number} _priority Ignored.
      * @param {number} _interval Ignored; runTimeouts() controls firing.
      * @param {Function} callback The timeout body.
@@ -67,19 +134,7 @@ export default {
         return id;
     },
 
-    /**
-     * @param {string} command A command line.
-     * @returns {[boolean, Array<string>]} Success and the argument vector.
-     * @throws {Error} On unbalanced quotes, as GLib does.
-     */
-    shell_parse_argv(command) {
-        const argv = command.match(/"[^"]*"|'[^']*'|\S+/g) ?? [];
-
-        if (/["']/.test(command.replace(/"[^"]*"|'[^']*'/g, '')))
-            throw new Error('Text ended before matching quote was found');
-
-        return [true, argv.map(arg => arg.replace(/^["']|["']$/g, ''))];
-    },
+    shell_parse_argv: shellParseArgv,
 
     Source: {
         /**

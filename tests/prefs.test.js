@@ -138,6 +138,52 @@ describe('fillPreferencesWindow', () => {
         expect(status.subtitle).toContain('Remmina was not found');
     });
 
+    it('shows a path with & or < in it instead of going blank', async () => {
+        // AdwPreferencesRow parses its subtitle as markup unless told not to,
+        // and a path is not markup: `R&D` failed to parse and the row that
+        // exists to show the directory showed nothing.
+        for (const dir of ['/srv/R&D profiles', '/srv/<lab>']) {
+            fs.mkdir(dir);
+
+            const window = await build(new FakeSettings({ 'profile-dir': dir }));
+            const status = statusRow(window);
+
+            expect(status.renderedSubtitle).toContain(dir);
+        }
+    });
+
+    it('explains an override that is not an absolute path', async () => {
+        const window = await build(new FakeSettings({ 'profile-dir': 'remmina' }));
+
+        expect(statusRow(window).subtitle).toContain('absolute path');
+    });
+
+    it('accepts an override under ~/', async () => {
+        fs.mkdir(`${HOME}/profiles`);
+
+        const window = await build(new FakeSettings({ 'profile-dir': '~/profiles' }));
+
+        expect(statusRow(window).subtitle).toBe(`${HOME}/profiles\nset below`);
+    });
+
+    it('keeps the newest answer when refreshes overlap', async () => {
+        // The override is bound to an entry, so every keystroke refreshes. An
+        // automatic detection started first finishes last — it probes more —
+        // and must not overwrite what the newer override produced.
+        fs.mkdir(FLATPAK_DATA);
+        fs.mkdir('/srv/typed');
+        const settings = new FakeSettings();
+        const window = await build(settings);
+        const status = statusRow(window);
+
+        const older = status.refresh();
+        settings.values.set('profile-dir', '/srv/typed');
+        const newer = status.refresh();
+        await Promise.all([older, newer]);
+
+        expect(status.subtitle).toContain('/srv/typed');
+    });
+
     it('lets go of its settings handler when the row is destroyed', async () => {
         fs.mkdir(FLATPAK_DATA);
         const settings = new FakeSettings();

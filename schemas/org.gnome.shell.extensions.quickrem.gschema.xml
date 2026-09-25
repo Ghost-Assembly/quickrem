@@ -6,7 +6,8 @@
             <default>''</default>
             <summary>Profile directory</summary>
             <description>
-                Directory to read .remmina profiles from. Leave empty to detect it
+                Directory to read .remmina profiles from: an absolute path, or one
+                starting with ~/ for the home directory. Leave empty to detect it
                 from the installed Remmina, which honors datadir_path in
                 remmina.pref and falls back to the Flatpak or native data
                 directory.

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
     APP_ID,
+    detectionPaths,
+    expandOverride,
     flatpakConfigDir,
     flatpakDataDir,
     joinPath,
@@ -72,6 +74,40 @@ describe('parseDatadirPath', () => {
         expect(parseDatadirPath(undefined)).toBeNull();
     });
 
+    it('matches the key exactly, not by prefix', () => {
+        // `datadir_path_x=` used to be read as datadir_path.
+        expect(
+            parseDatadirPath(
+                '[remmina_pref]\ndatadir_path_x=/wrong\ndatadir_path=/right\n',
+            ),
+        ).toBe('/right');
+        expect(
+            parseDatadirPath('[remmina_pref]\ndatadir_pathology=/wrong\n'),
+        ).toBeNull();
+    });
+
+    it('reads only the [remmina_pref] group', () => {
+        expect(parseDatadirPath('[other]\ndatadir_path=/wrong\n')).toBeNull();
+        expect(
+            parseDatadirPath(
+                '[other]\ndatadir_path=/wrong\n[remmina_pref]\ndatadir_path=/right\n',
+            ),
+        ).toBe('/right');
+    });
+
+    it('undoes GKeyFile escapes, as Remmina reading its own file would', () => {
+        expect(
+            parseDatadirPath('[remmina_pref]\ndatadir_path=/srv/my\\sprofiles\n'),
+        ).toBe('/srv/my profiles');
+        expect(parseDatadirPath('[remmina_pref]\ndatadir_path=/srv/a\\\\b\n')).toBe(
+            '/srv/a\\b',
+        );
+        // One pass, so an escaped backslash followed by `s` is not a space.
+        expect(parseDatadirPath('[remmina_pref]\ndatadir_path=/srv/x\\\\s\n')).toBe(
+            '/srv/x\\s',
+        );
+    });
+
     it('does not return the encryption key next to it', () => {
         const text = '[remmina_pref]\nsecret=TOPSECRETKEY\ndatadir_path=/srv\n';
 
@@ -136,6 +172,40 @@ describe('resolveProfileDir', () => {
             dir: `${HOME}/.var/app/${APP_ID}/data/remmina`,
             source: 'flatpak',
         });
+    });
+});
+
+describe('the profile-dir override', () => {
+    it('expands a leading ~ to the home directory', () => {
+        expect(expandOverride('~', HOME)).toBe(HOME);
+        expect(expandOverride('~/remmina', HOME)).toBe(`${HOME}/remmina`);
+        expect(resolveProfileDir({ override: ' ~/profiles ', home: HOME })).toEqual({
+            dir: `${HOME}/profiles`,
+            source: 'override',
+        });
+    });
+
+    it('rejects a path that is not absolute rather than guessing', () => {
+        // Relative to gnome-shell's working directory is nothing the user
+        // chose, and ~user is not expanded.
+        for (const value of ['remmina', './remmina', '~other/remmina'])
+            expect(
+                resolveProfileDir({
+                    override: value,
+                    home: HOME,
+                    hasFlatpakData: true,
+                }),
+            ).toEqual({ dir: null, source: 'invalid' });
+    });
+});
+
+describe('detectionPaths', () => {
+    it('names the Flatpak data directory and both remmina.pref files', () => {
+        expect(detectionPaths({ home: HOME, xdgConfigHome: '/xdg/config' })).toEqual([
+            `${HOME}/.var/app/${APP_ID}/data/remmina`,
+            '/xdg/config/remmina/remmina.pref',
+            `${HOME}/.var/app/${APP_ID}/config/remmina/remmina.pref`,
+        ]);
     });
 });
 
