@@ -15,8 +15,10 @@ setup:
     npm ci
     @for tool in gjs glib-compile-schemas gnome-shell; do \
         command -v "$tool" >/dev/null \
-            || { echo "missing $tool — dnf install gjs glib2-devel gnome-shell"; exit 1; }; \
+            || { echo "missing $tool — dnf install gjs glib2 gnome-shell"; exit 1; }; \
     done
+    @[[ -x /usr/libexec/mutter-devkit ]] \
+        || echo "optional: dnf install mutter-devkit, which \`just run\` needs"
     @echo "ready"
 
 # Format code in place
@@ -41,7 +43,7 @@ coverage:
 
 # Both need a real Shell, so neither runs in CI.
 # Smoke-test in a headless gnome-shell and check the bundle layout
-test-live:
+test-live: build
     ./scripts/headless-check.sh
     ./scripts/pack-check.sh
 
@@ -78,9 +80,11 @@ build:
     zip -qr {{ uuid }}.shell-extension.zip {{ src }} -x 'schemas/gschemas.compiled'
     @echo "built {{ uuid }}.shell-extension.zip"
 
-# Run a nested gnome-shell to try the extension by hand
+# GNOME 49 and later have no nested mode: --devkit opens the Shell in a
+# window through mutter-devkit (dnf install mutter-devkit).
+# Run a gnome-shell in a window to try the extension by hand
 run:
-    dbus-run-session -- gnome-shell --wayland
+    dbus-run-session -- gnome-shell --devkit --wayland
 
 # Copy the extension into the user extensions directory
 install:

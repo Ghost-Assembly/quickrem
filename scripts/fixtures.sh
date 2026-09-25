@@ -8,6 +8,12 @@
 
 set -euo pipefail
 
+# The system's gsettings, not whichever is first on PATH. A Homebrew GLib
+# (pulled in as a dependency of something else) ships a gsettings built
+# without the dconf module: it reads a keyfile instead of dconf, so it would
+# never see the profile-dir the extension is actually using.
+export PATH="/usr/bin:$PATH"
+
 PREFIX="quickrem-fixture"
 UUID="quickrem@napalm255.github.io"
 SCHEMA="org.gnome.shell.extensions.quickrem"
@@ -33,6 +39,12 @@ profile_dir() {
         override="${override%\'}"
         override="${override#\'}"
         if [[ -n "$override" ]]; then
+            # A leading ~ means the home directory, as the extension reads it.
+            # shellcheck disable=SC2088  # a literal ~ is exactly what is matched
+            case "$override" in
+            "~") override="$HOME" ;;
+            "~/"*) override="$HOME/${override#"~/"}" ;;
+            esac
             echo "$override"
             return
         fi

@@ -50,10 +50,12 @@ jobs:
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
+                  # gitleaks scans history; a shallow clone gives it one commit.
+                  fetch-depth: 0
                   persist-credentials: false
 
             - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
 
             # Same recipe as `just security` locally: gitleaks, trivy, osv-scanner,
-            # actionlint and zizmor, all pinned by mise.toml.
+            # actionlint and zizmor, all installed from mise.toml.
             - run: just security
