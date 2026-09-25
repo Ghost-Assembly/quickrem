@@ -14,7 +14,9 @@ secrets, architecture, testing, packaging and releasing.
 - Lists every saved `.remmina` profile, sorted by name, with an icon per
   protocol.
 - Watches the profile directory, so adding, editing or removing a profile
-  updates the menu straight away.
+  updates the menu straight away. It also watches where detection looks, so
+  installing Remmina after the extension, or setting `datadir_path` in
+  Remmina's preferences, is picked up without logging out.
 - Scrolls the list once it outgrows the screen, capped at half the work area.
   Short lists are untouched — no scrollbar appears until there is something to
   scroll.
@@ -24,6 +26,9 @@ secrets, architecture, testing, packaging and releasing.
   and lets the portal map the path into the Flatpak sandbox.
 - Finds the profile directory on its own, honoring `datadir_path` in
   `remmina.pref`, and falls back to the Flatpak or native data directory.
+- Reads only regular files, a symlink to one included, and at most 256 KiB of
+  each, so nothing stray in the profile directory can stall or exhaust the
+  Shell.
 
 It never reads Remmina's stored passwords. `password`, `ssh_passphrase` and the
 rest are encrypted with a key in `remmina.pref`, and `modules/profiles.js` drops
@@ -31,7 +36,7 @@ them while parsing rather than filtering them later.
 
 ## Install
 
-Needs GNOME 49 or newer, and Remmina. From the latest release, with no clone and
+Needs GNOME Shell 49 or 50, and Remmina. From the latest release, with no clone and
 no toolchain — `gnome-extensions` ships with GNOME Shell itself:
 
 ```
@@ -70,6 +75,9 @@ rather than silent.
 | Profile directory | Detect it: `datadir_path`, then a native install, then the Flatpak |
 | Launch command    | Use the handler registered for `application/x-remmina`             |
 
+A profile directory must be an absolute path or start with `~/`; anything else
+is reported in that first row rather than guessed at.
+
 `Launch command` is the escape hatch for an unusual install. The profile path is
 appended as a separate argument, never interpolated into the string.
 
@@ -86,9 +94,10 @@ just test-live    # headless Shell smoke test, then the packer check
 just logs         # follow the extension's output
 ```
 
-`modules/profiles.js` and `modules/paths.js` import nothing at all, so Vitest
-runs them on plain Node. `modules/store.js` is unit-tested against an in-memory
-Gio in `tests/stubs/`, which is what makes the debounce, the generation guard
+`modules/profiles.js`, `modules/paths.js` and `modules/keyfile.js` import
+nothing but each other, so Vitest runs them on plain Node. `modules/store.js` is
+unit-tested against an in-memory Gio in `tests/stubs/` — FIFOs, device nodes and
+symlinks included — which is what makes the debounces, the generation guards
 and the watch re-attach reachable from a test.
 
 `modules/launch.js` exists so the launch path can be tested at all: `panel.js`
@@ -103,26 +112,39 @@ while a module is being evaluated, and a translated string in a module-level
 table stops the preferences window opening at all — silently, because nothing
 else in the extension imports `prefs.js`.
 
-`modules/panel.js` and `extension.js` are widget construction and lifecycle
-wiring; asserting those against stubs would test the stubs, so they are covered
-by `scripts/headless-check.sh` instead, which enables, disables and re-enables
-the real extension in a real headless gnome-shell and fails on a leaked
-handler.
+`modules/panel.js` is unit-tested against stubs of St and the Shell's menus.
+Those stubs model the Shell behaviors the panel has to work around — the Shell
+never destroys a quick toggle's menu, and a quick toggle's menu measures the
+height it animates to before it announces that it is opening — because a
+headless smoke test that only reads the log saw neither.
+
+`extension.js` only pairs construction with teardown. It is covered by
+`scripts/headless-check.sh`, which enables, disables and re-enables the real
+extension in a real headless gnome-shell and fails on a JavaScript error or a
+lifetime warning.
 
 ## Architecture
 
-| File                  | Imports            | Job                                                 |
-| --------------------- | ------------------ | --------------------------------------------------- |
-| `extension.js`        | Shell              | Pair construction with teardown, nothing else       |
-| `modules/profiles.js` | nothing            | Parse a `.remmina` file, sort, map protocol to icon |
-| `modules/paths.js`    | nothing            | Decide which directory to read                      |
-| `modules/store.js`    | Gio, GLib, GObject | Scan and watch it; publish `profiles`               |
-| `modules/launch.js`   | Gio, GLib, Shell   | Decide what to run, and with which arguments        |
-| `modules/panel.js`    | St, QuickSettings  | The tile, its menu and its rows                     |
-| `prefs.js`            | Adw, Gtk           | Preferences, in its own process                     |
+| File                  | Platform imports                    | Job                                                  |
+| --------------------- | ----------------------------------- | ---------------------------------------------------- |
+| `extension.js`        | Shell (Extension, Main)             | Pair construction with teardown, nothing else        |
+| `modules/keyfile.js`  | none                                | Read one group of a GKeyFile, exact keys only        |
+| `modules/profiles.js` | none                                | Parse a `.remmina` file, sort, map protocol to icon  |
+| `modules/paths.js`    | none                                | Decide which directory to read                       |
+| `modules/io.js`       | Gio, GLib                           | Asynchronous probes, and bounded reads of text files |
+| `modules/detect.js`   | GLib                                | Probe the system and apply the rules in `paths.js`   |
+| `modules/store.js`    | Gio, GLib, GObject                  | Scan and watch it; publish `profiles` and `source`   |
+| `modules/launch.js`   | Gio, GLib, Shell                    | Decide what to run, and with which arguments         |
+| `modules/panel.js`    | Clutter, Gio, GObject, Pango, St, … | The tile, its menu and its rows                      |
+| `prefs.js`            | Adw, Gio, GObject                   | Preferences, in its own process                      |
 
-The store owns the data and the panel owns the widgets; the panel rebuilds from
-`notify::profiles` and holds no profile state of its own.
+"none" means the module imports only other modules that import none, which is
+what lets Vitest run it on plain Node and the preferences process load it. The
+`…` for `modules/panel.js` is the Shell's own UI modules: Main, PopupMenu,
+QuickSettings and animationUtils.
+
+The store owns the data and the panel owns the widgets; the panel rebuilds on
+the store's `changed` signal and holds no profile state of its own.
 
 ### Why the list scrolls
 
@@ -135,8 +157,10 @@ So `modules/panel.js` subclasses `PopupMenuSection` and swaps its `actor` for an
 `St.ScrollView` around the same box. `PopupMenuBase.addMenuItem()` adds
 `section.actor` and does its bookkeeping against the section object, so key
 navigation, open-state propagation and activation all survive the swap. The cap
-is recomputed on every rebuild and every menu open, which picks up a monitor or
-text-scaling change without watching for either.
+is recomputed just before every open and on a rebuild while the menu is open,
+which picks up a monitor or text-scaling change without watching for either. It
+has to come before the open: the menu measures the height it animates to first
+and only then says it is opening.
 
 ## Contributing
 
