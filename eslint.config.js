@@ -66,4 +66,12 @@ export default [
             'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
         },
     },
+    {
+        // The docs suite: Node for the runner, and the browser for the
+        // callbacks it evaluates inside the page.
+        files: ['tests/**/*.spec.js'],
+        languageOptions: {
+            globals: { ...globals.node, ...globals.browser },
+        },
+    },
 ];

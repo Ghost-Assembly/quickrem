@@ -56,6 +56,10 @@ jobs:
 
             - run: npm ci
 
+            # The docs site's suite runs in real browsers.
+            - name: Install test browsers
+              run: npx playwright install --with-deps chromium firefox
+
             # Gate the release on the full suite; never publish an untested build.
             - run: just ci
 
