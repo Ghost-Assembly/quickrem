@@ -55,9 +55,41 @@ class Container extends Widget {
     }
 }
 
+/**
+ * Whether Pango would reject a string as markup. Only what prefs.js can
+ * produce is modeled: it never emits tags, so any `<` is an error, and an `&`
+ * that does not start an entity is one too.
+ */
+const INVALID_MARKUP = /<|&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/;
+
+/**
+ * AdwPreferencesRow, as far as its title and subtitle go. `use-markup`
+ * defaults to true, as in libadwaita, and a string that fails to parse as
+ * markup renders as nothing at all — with a Gtk-WARNING, confirmed against
+ * libadwaita 1.9. Modeling that is what lets a test see a row go blank.
+ */
+class PreferencesRow extends Widget {
+    constructor(props = {}) {
+        super({ use_markup: true, ...props });
+    }
+
+    /**
+     * @param {string} text A title or subtitle.
+     * @returns {string} What the row would show for it.
+     */
+    _render(text) {
+        return this.use_markup && INVALID_MARKUP.test(text ?? '') ? '' : (text ?? '');
+    }
+
+    /** @returns {string} The subtitle as it would appear on screen. */
+    get renderedSubtitle() {
+        return this._render(this.subtitle);
+    }
+}
+
 export default {
-    ActionRow: class ActionRow extends Widget {},
-    EntryRow: class EntryRow extends Widget {},
+    ActionRow: class ActionRow extends PreferencesRow {},
+    EntryRow: class EntryRow extends PreferencesRow {},
     PreferencesGroup: class PreferencesGroup extends Container {},
     PreferencesPage: class PreferencesPage extends Container {},
     PreferencesWindow: class PreferencesWindow extends Container {},

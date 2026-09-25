@@ -11,14 +11,17 @@ import {
     gettext as _,
 } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-// modules/detect.js imports only gi:// and modules/paths.js, so it is safe to
-// pull into this process. Sharing the whole probe — not just the rules under it
-// — is what stops the directory shown here from drifting away from the one the
-// Shell actually reads.
+// modules/detect.js and modules/io.js import only gi:// and modules that import
+// nothing, so they are safe to pull into this process. Sharing the whole probe
+// — not just the rules under it — is what stops the directory shown here from
+// drifting away from the one the Shell actually reads.
 import { detectProfileDir } from './modules/detect.js';
+import { pathExists } from './modules/io.js';
 
 /**
- * How each outcome of the detection reads to a person.
+ * The second line of the status row: how the directory was chosen, and whether
+ * it exists. Whole sentences, one per case, so a translator never has to make
+ * two separately translated fragments agree with each other.
  *
  * A function rather than a module-level table because `_()` may only be called
  * once the extension is resolved and its gettext domain is bound. Building the
@@ -26,48 +29,28 @@ import { detectProfileDir } from './modules/detect.js';
  * the preferences window never opens at all.
  *
  * @param {string} source A source from detectProfileDir.
+ * @param {boolean} exists Whether the directory exists.
  * @returns {string} How to describe it.
  */
-function sourceLabel(source) {
+function sourceLabel(source, exists) {
     switch (source) {
         case 'override':
-            return _('set below');
+            return exists ? _('set below') : _('set below — does not exist yet');
         case 'datadir':
-            return _('from datadir_path in remmina.pref');
+            return exists
+                ? _('from datadir_path in remmina.pref')
+                : _('from datadir_path in remmina.pref — does not exist yet');
         case 'native':
-            return _('detected from the native Remmina install');
+            return exists
+                ? _('detected from the native Remmina install')
+                : _('detected from the native Remmina install — does not exist yet');
         case 'flatpak':
-            return _('detected from the Flatpak install');
+            return exists
+                ? _('detected from the Flatpak install')
+                : _('detected from the Flatpak install — does not exist yet');
         default:
             return source;
     }
-}
-
-/** Stateless for these calls, so one is reused rather than one per read. */
-const DECODER = new TextDecoder();
-
-/**
- * Work out which directory the Shell would read, right now.
- *
- * The probe and the precedence rules are detect.js's; only the reading differs.
- * Synchronous I/O is fine here — this is an ordinary application process, not
- * the compositor thread — and routing it through the same shared probe is what
- * stops this window reporting a different directory than the panel reads.
- *
- * @param {Gio.Settings} settings Extension settings.
- * @returns {Promise<{dir: string|null, source: string}>} The directory and why.
- */
-function detectFor(settings) {
-    return detectProfileDir({
-        override: settings.get_string('profile-dir'),
-        readText: async path => {
-            // Synchronous load_contents returns (ok, contents, etag); the
-            // promisified async one drops the boolean. They genuinely differ.
-            const [, contents] = Gio.File.new_for_path(path).load_contents(null);
-
-            return DECODER.decode(contents);
-        },
-    });
 }
 
 /**
@@ -80,9 +63,14 @@ const StatusRow = GObject.registerClass(
          * @param {Gio.Settings} settings Extension settings.
          */
         constructor(settings) {
-            super({ title: _('Profile directory') });
+            // Plain text, not markup. AdwPreferencesRow parses its title and
+            // subtitle as Pango markup by default, and the subtitle holds a
+            // path: one with & or < in it failed to parse and the row went
+            // blank, hiding exactly the thing this row exists to show.
+            super({ title: _('Profile directory'), use_markup: false });
 
             this._settings = settings;
+            this._generation = 0;
             this.add_css_class('property');
 
             this._changedId = settings.connect('changed::profile-dir', () =>
@@ -102,22 +90,28 @@ const StatusRow = GObject.registerClass(
          *   so a test can await it; nothing in the UI needs to.
          */
         async refresh() {
-            try {
-                const { dir, source } = await detectFor(this._settings);
+            // The override is bound to an entry and changes on every
+            // keystroke, so refreshes overlap; only the newest may write.
+            const generation = ++this._generation;
 
-                if (!dir) {
+            try {
+                const { dir, source } = await detectProfileDir(
+                    this._settings.get_string('profile-dir'),
+                );
+                const exists = dir ? await pathExists(dir) : false;
+                if (generation !== this._generation) return;
+
+                if (source === 'invalid') {
+                    this.subtitle = _(
+                        'The directory below must be an absolute path, or start with ~/.',
+                    );
+                } else if (!dir) {
                     this.subtitle = _(
                         'Remmina was not found. Install it, or set a directory below.',
                     );
-                    return;
+                } else {
+                    this.subtitle = `${dir}\n${sourceLabel(source, exists)}`;
                 }
-
-                const how = sourceLabel(source);
-                const exists = Gio.File.new_for_path(dir).query_exists(null);
-
-                this.subtitle = exists
-                    ? `${dir}\n${how}`
-                    : `${dir}\n${how} — ${_('does not exist yet')}`;
             } catch (error) {
                 console.warn(`[quickrem] could not resolve the directory: ${error}`);
             }
@@ -134,7 +128,8 @@ export default class QuickRemPreferences extends ExtensionPreferences {
         const page = new Adw.PreferencesPage();
 
         const status = new Adw.PreferencesGroup({
-            title: _('Remmina'),
+            // A product name, so not marked for translation.
+            title: 'Remmina',
             description: _(
                 'QuickRem detects where Remmina keeps its profiles. Override either ' +
                     'setting only if detection gets it wrong.',
@@ -150,6 +145,9 @@ export default class QuickRemPreferences extends ExtensionPreferences {
 
         const overrides = new Adw.PreferencesGroup({ title: _('Overrides') });
 
+        // Written on every keystroke. The status row and the Shell's store
+        // both cope with that: each keeps only its newest resolve, and the
+        // store waits for the typing to stop before it starts one.
         const dir = new Adw.EntryRow({ title: _('Profile directory') });
         settings.bind('profile-dir', dir, 'text', Gio.SettingsBindFlags.DEFAULT);
         overrides.add(dir);
