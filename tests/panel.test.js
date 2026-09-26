@@ -108,6 +108,20 @@ describe('disable', () => {
         // Only the Shell's own handler, which it never disconnects, remains.
         expect(menu.handlerCount).toBe(1);
     });
+
+    it('survives the Shell calling the wrapped open() after destroy', () => {
+        // The Shell never destroys a toggle's menu (see the test above), which
+        // means it also never lets go of a reference to it. Its own
+        // open-state-changed handler, still attached, can call the wrapped
+        // open() this toggle installed — and that wrapper reached into
+        // `this._section`, which destroy() had already set to null.
+        const { indicator, toggle } = enable(new FakeStore({ profiles: profiles(3) }));
+        const menu = toggle.menu;
+
+        indicator.destroy();
+
+        expect(() => menu.open()).not.toThrow();
+    });
 });
 
 describe('opening the menu', () => {

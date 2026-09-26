@@ -212,6 +212,10 @@ const RemminaToggle = GObject.registerClass(
             // menu when the menu is destroyed.
             const open = this.menu.open.bind(this.menu);
             this.menu.open = animate => {
+                // The Shell never destroys a toggle's menu (see destroy()
+                // below), so it keeps calling this wrapper after destroy()
+                // has already let go of _section.
+                if (!this._section) return;
                 if (!this.menu.isOpen) this._section.updateHeight();
                 open(animate);
             };
