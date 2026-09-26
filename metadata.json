@@ -1,7 +1,7 @@
 {
     "uuid": "quickrem@napalm255.github.io",
     "name": "QuickRem",
-    "description": "Remmina connections in the Quick Settings panel. Saved profiles are one click away, and the list follows the profile directory as it changes.",
+    "description": "Your saved Remmina connections in Quick Settings, following the profile folder as it changes.",
     "shell-version": ["49", "50"],
     "url": "https://github.com/Ghost-Assembly/quickrem",
     "settings-schema": "org.gnome.shell.extensions.quickrem",
