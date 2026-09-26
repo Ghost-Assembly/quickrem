@@ -43,8 +43,12 @@ Run `just ci` before claiming anything done.
   `modules/profiles.js` drops them _while parsing_ a profile, using
   `modules/keyfile.js`'s `keep` callback (a key it rejects is never unescaped
   or stored) — filtering afterwards instead of at parse time is not
-  equivalent and is not acceptable. `modules/io.js` reads `remmina.pref` for
-  exactly one key, `datadir_path`; the `secret=` beside it is never touched.
+  equivalent and is not acceptable. `remmina.pref` is read for one key,
+  `datadir_path`: `modules/paths.js`'s `parseDatadirPath` (called from
+  `readDatadirPath`, in turn called from `modules/detect.js`) uses the same
+  `keyfile.js` `readGroup` with a keep-only-`datadir_path` filter, so the
+  `secret=` beside it — the key Remmina encrypts stored passwords with — is
+  never returned and never kept.
 - **A profile path is its own `argv` element, never interpolated.**
   `modules/launch.js`'s `spawnOverride` parses `launch-command` with
   `GLib.shell_parse_argv` and then appends the path as a separate element, so
