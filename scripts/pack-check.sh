@@ -32,11 +32,15 @@ trap 'rm -rf "$WORK"' EXIT
     exit 1
 }
 
-# --extra-source takes a directory and recurses, so modules/ goes in whole. That
-# matters: naming files individually would silently drop a newly added module.
+# --extra-source takes a directory and recurses, so modules/ and icons/ go in
+# whole. That matters: naming files individually would silently drop a newly
+# added module. stylesheet.css is a single file, named only when the project
+# has one; `just build` ships it on the same condition.
+extra=(--extra-source=modules --extra-source=icons)
+[[ -f stylesheet.css ]] && extra+=(--extra-source=stylesheet.css)
+
 gnome-extensions pack --force -o "$WORK" \
-    --extra-source=modules \
-    --extra-source=icons \
+    "${extra[@]}" \
     --schema="$SCHEMA" \
     . >/dev/null
 
@@ -60,6 +64,22 @@ if [[ "$(unzip -Z1 "$ZIP" | grep -c '^metadata.json$')" -ne 1 ]]; then
     echo "FAIL: metadata.json is not at the archive root" >&2
     exit 1
 fi
+
+# Every shipped icon must actually decode.
+#
+# This exists because one did not. A long XML comment placed before the <svg>
+# element defeats gdk-pixbuf's format sniffing, so the file loads as "couldn't
+# recognize the image file format" and the extension renders with no icon at
+# all — and nothing appears in the shell log to say why. Neither the unit suite
+# nor headless-check.sh looks at an icon, so only this notices.
+for icon in "$REPO_ROOT"/icons/*.svg; do
+    [[ -e "$icon" ]] || continue
+    if ! gjs -m "$REPO_ROOT/scripts/icon-check.js" "$icon" >/dev/null 2>&1; then
+        echo "FAIL: $(basename "$icon") does not decode as an image" >&2
+        exit 1
+    fi
+done
+echo "ok: $(find "$REPO_ROOT/icons" -name '*.svg' | wc -l) icon(s) decode"
 
 echo "ok: $(listing "$ZIP" | wc -l) files, matching gnome-extensions pack"
 echo "ok: metadata.json at the archive root"

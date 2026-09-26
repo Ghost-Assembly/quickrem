@@ -4,3 +4,8 @@ schemas/gschemas.compiled
 package-lock.json
 test-results/
 playwright-report/
+
+# SDD workspace scratch. Ignored by its own nested .gitignore
+# (.superpowers/sdd/.gitignore), which Prettier does not read, so it must be
+# named here too or `just lint` fails on any machine where it happens to exist.
+.superpowers/
