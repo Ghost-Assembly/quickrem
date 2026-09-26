@@ -1,12 +1,13 @@
 # QuickRem
 
-Remmina connections in the GNOME Shell Quick Settings panel.
+Your saved Remmina connections in Quick Settings, following the profile folder as it
+changes.
 
 Open the system menu, click the Remmina tile, pick a saved connection. The list
 is read from Remmina's own profile directory and follows it as it changes, so a
 connection saved in Remmina shows up here without a reload.
 
-**[Documentation →](https://ghost-assembly.github.io/quickrem/)** — profiles, launching,
+**[Documentation →](https://ghost-assembly.com/quickrem/)** — profiles, launching,
 secrets, architecture, testing, packaging and releasing.
 
 ## What it does
@@ -39,30 +40,27 @@ them while parsing rather than filtering them later.
 Needs GNOME Shell 49 or 50, and Remmina. From the latest release, with no clone and
 no toolchain — `gnome-extensions` ships with GNOME Shell itself:
 
-```
+```bash
 curl -LO 'https://github.com/Ghost-Assembly/quickrem/releases/latest/download/quickrem@napalm255.github.io.shell-extension.zip'
 gnome-extensions install --force 'quickrem@napalm255.github.io.shell-extension.zip'
-```
-
-That unpacks the extension and compiles its settings schema, so there is no
-separate `glib-compile-schemas` step. Log out and back in — Wayland cannot
-reload the Shell in place — then turn it on:
-
-```
+# log out and back in, then
 gnome-extensions enable quickrem@napalm255.github.io
 ```
 
+That unpacks the extension and compiles its settings schema, so there is no
+separate `glib-compile-schemas` step.
+
 From a clone:
 
-```
+```bash
 just setup
 just install
 just enable
 ```
 
-A brand-new extension is not visible to a running Shell on Wayland, so the
-first `just enable` after a fresh `just install` will say the extension does not
-exist. Log out and back in, then run it.
+A newly installed extension is not visible to a running Shell on Wayland, which
+cannot reload the Shell in place: the first `enable` after a fresh install says
+the extension does not exist. Log out and back in, then it works.
 
 ## Preferences
 
@@ -81,9 +79,9 @@ is reported in that first row rather than guessed at.
 `Launch command` is the escape hatch for an unusual install. The profile path is
 appended as a separate argument, never interpolated into the string.
 
-## Develop
+## Development
 
-```
+```bash
 just              # list every recipe
 just test         # unit suite, runs on Node
 just test-docs    # the docs site, in Chromium and Firefox
@@ -165,21 +163,15 @@ and only then says it is opening.
 
 ## Contributing
 
-`main` is protected: it takes no direct pushes, no force-pushes and no merge
-commits. Everything lands through a pull request whose title is a Conventional
-Commit — that title becomes the squashed commit subject, so the convention
-survives the merge.
+Everything lands through a pull request whose title is a Conventional Commit.
+See [AGENTS.md](AGENTS.md) for the repository's conventions.
 
-```
+```bash
 git switch -c type/short-description
 just ci
 gh pr create --fill
 gh pr merge --squash --auto
 ```
-
-`ci` and `CodeQL` have to pass before the merge button unlocks, and the branch
-has to be current with `main`. No approving review is required, so a single
-maintainer is not locked out of their own repository.
 
 ## Releasing
 
@@ -187,10 +179,10 @@ Set the version in `metadata.json` and `package.json` and land that through a
 pull request like anything else. Then tag the merged commit on `main` and push
 the tag — tags are not covered by branch protection:
 
-```
+```bash
 git switch main && git pull
-git tag -a v0.1.0 -m 'release v0.1.0'
-git push origin v0.1.0
+git tag -a v0.1.2 -m 'release v0.1.2'
+git push origin v0.1.2
 ```
 
 CI checks the tag against both files before it builds anything, so a tag that
