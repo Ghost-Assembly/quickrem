@@ -3,7 +3,7 @@
 
 export default {
     title: 'QuickRem',
-    site: 'https://ghost-assembly.github.io/quickrem/',
+    site: 'https://ghost-assembly.com/quickrem/',
     repo: 'https://github.com/Ghost-Assembly/quickrem',
 
     // [id, heading], in page order. The contents list must match.
