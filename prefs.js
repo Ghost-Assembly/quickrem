@@ -33,24 +33,37 @@ import { pathExists } from './modules/io.js';
  * @returns {string} How to describe it.
  */
 function sourceLabel(source, exists) {
-    switch (source) {
-        case 'override':
-            return exists ? _('set below') : _('set below — does not exist yet');
-        case 'datadir':
-            return exists
-                ? _('from datadir_path in remmina.pref')
-                : _('from datadir_path in remmina.pref — does not exist yet');
-        case 'native':
-            return exists
-                ? _('detected from the native Remmina install')
-                : _('detected from the native Remmina install — does not exist yet');
-        case 'flatpak':
-            return exists
-                ? _('detected from the Flatpak install')
-                : _('detected from the Flatpak install — does not exist yet');
-        default:
-            return source;
-    }
+    // [when it exists, when it does not], one whole sentence each — the
+    // branches above only ever differed in which pair they picked and which
+    // half of it they returned. A Map, not a plain object keyed by `source`:
+    // ESLint's object-injection rule cannot tell that `source` is one of
+    // detect.js's own fixed strings rather than external input.
+    const pair = new Map([
+        ['override', [_('set below'), _('set below — does not exist yet')]],
+        [
+            'datadir',
+            [
+                _('from datadir_path in remmina.pref'),
+                _('from datadir_path in remmina.pref — does not exist yet'),
+            ],
+        ],
+        [
+            'native',
+            [
+                _('detected from the native Remmina install'),
+                _('detected from the native Remmina install — does not exist yet'),
+            ],
+        ],
+        [
+            'flatpak',
+            [
+                _('detected from the Flatpak install'),
+                _('detected from the Flatpak install — does not exist yet'),
+            ],
+        ],
+    ]).get(source);
+
+    return pair ? pair[exists ? 0 : 1] : source;
 }
 
 /**

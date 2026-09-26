@@ -3,7 +3,8 @@
  *
  * Hand-written, no framework, no build step and no JavaScript: the theme
  * follows the reader's color scheme and navigation is plain anchors. The same
- * stylesheet serves every quick* docs site; only index.html changes.
+ * stylesheet serves every quick* docs site; only index.html and
+ * docs/project.css, linked after this file, change.
  *
  * Rules, from the Ghost Assembly org site:
  *   - Brand stops are sampled from the logo: cyan, blue, magenta.
@@ -381,8 +382,9 @@ svg {
 
 /* ---- The product drawing ------------------------------------------------ */
 
-/* QuickMusic in GNOME's own style. Each project draws its own here, or puts a
- * screenshot in its place. Colors are GNOME's, not the theme's. */
+/* The product in GNOME's own style. The shared pieces are here; each project
+ * draws its own in docs/project.css, or puts a screenshot in its place.
+ * Colors are GNOME's, not the theme's. */
 
 .shot {
     display: flex;

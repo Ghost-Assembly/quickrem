@@ -1,14 +1,18 @@
-// Stand-in for gi://GObject, wired up by the aliases in vitest.config.js.
+// GObject, as far as the extension uses it.
 //
-// Only what modules/store.js needs: a base class that can emit, the two
-// signal-tracker methods gnome-shell adds to GObject.Object, and enough of
-// ParamSpec for registerClass to accept the property block.
+// registerClass is the identity. The construction path it provides in real GJS
+// — new X(args) dispatching to _init — is provided instead by FakeActor's
+// constructor, so a subclass written the way gnome-shell writes them works
+// unchanged under Vitest.
+//
+// GObject.Object is a plain signal emitter, for code that subclasses it
+// directly rather than an actor: connect, emit and notify, plus the two
+// signal-tracker methods gnome-shell adds to every GObject.
 
 /**
- * The signal behavior store.js relies on. `connectObject` and
+ * The signal behavior a non-actor GObject needs. `connectObject` and
  * `disconnectObject` are gnome-shell's additions, not GObject's, but they are
- * on every GObject inside the Shell and are the whole point of the teardown
- * this stub exists to test.
+ * on every GObject inside the Shell.
  */
 export class SignalEmitter {
     constructor() {
@@ -78,18 +82,15 @@ export class SignalEmitter {
 const paramSpec = () => ({});
 
 export default {
-    /**
-     * @param {object|Function} meta Property block, or the class itself.
-     * @param {Function} [cls] The class, when meta was a property block.
-     * @returns {Function} The class, unchanged.
-     */
-    registerClass(meta, cls) {
-        return typeof meta === 'function' ? meta : cls;
+    registerClass(...args) {
+        // Real registerClass accepts an optional metadata object first.
+        return args.at(-1);
     },
 
     Object: SignalEmitter,
 
     ParamFlags: { READABLE: 1, WRITABLE: 2, READWRITE: 3 },
+    BindingFlags: { DEFAULT: 0, SYNC_CREATE: 1, BIDIRECTIONAL: 2 },
 
     ParamSpec: {
         jsobject: paramSpec,

@@ -6,7 +6,7 @@
         <title>QuickRem · Ghost Assembly</title>
         <meta
             name="description"
-            content="QuickRem puts your saved Remmina connections in the GNOME quick settings menu: pick one and Remmina connects. Works with the Flatpak and distribution packages."
+            content="QuickRem puts your saved Remmina connections in the GNOME Quick Settings menu: pick one and Remmina connects. Works with the Flatpak and distribution packages."
         />
         <meta name="color-scheme" content="dark light" />
         <meta name="theme-color" content="#03030a" />
@@ -27,12 +27,12 @@
         <meta property="og:title" content="QuickRem" />
         <meta
             property="og:description"
-            content="Remmina connections in the GNOME quick settings menu."
+            content="Remmina connections in the GNOME Quick Settings menu."
         />
-        <meta property="og:url" content="https://ghost-assembly.github.io/quickrem/" />
+        <meta property="og:url" content="https://ghost-assembly.com/quickrem/" />
         <meta
             property="og:image"
-            content="https://ghost-assembly.github.io/quickrem/assets/og-image.png"
+            content="https://ghost-assembly.com/quickrem/assets/og-image.png"
         />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -90,7 +90,7 @@
                 <div>
                     <p class="eyebrow">GNOME Shell extension</p>
                     <h1 id="title">QuickRem</h1>
-                    <p class="tagline">Remmina connections in GNOME quick settings.</p>
+                    <p class="tagline">Remmina connections in GNOME Quick Settings.</p>
                     <p class="lede">
                         Open the system menu, click the Remmina tile, pick a saved
                         connection. The list is read from Remmina’s own profile
@@ -131,7 +131,7 @@
                 <figure
                     class="shot"
                     role="img"
-                    aria-label="QuickRem in GNOME: the quick settings Remmina tile reads 5 profiles, and its open menu lists Build server, File drop, Lab desktop, Old thin client and Router admin, each with a protocol icon and user@host, then Open Remmina… and Settings."
+                    aria-label="QuickRem in GNOME: the Quick Settings Remmina tile reads 5 profiles, and its open menu lists Build server, File drop, Lab desktop, Old thin client and Router admin, each with a protocol icon and user@host, then Open Remmina… and Settings."
                 >
                     <div class="gtop">
                         <span class="ws"><i></i><i></i><i></i></span>
@@ -444,7 +444,7 @@
                         >
                     </li>
                     <li>
-                        <a href="https://ghost-assembly.github.io/"
+                        <a href="https://ghost-assembly.com/"
                             ><svg
                                 width="15"
                                 height="15"
@@ -540,7 +540,7 @@
                     <p class="kicker">01</p>
                     <h2 id="overview-title">Overview</h2>
                     <p class="lead">
-                        QuickRem adds one tile to quick settings. Its menu lists every
+                        QuickRem adds one tile to Quick Settings. Its menu lists every
                         connection saved in Remmina; pick one and Remmina connects.
                         There is no top bar icon: Remmina is not a status, and an icon
                         that never changes is noise.
@@ -1227,7 +1227,7 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                     </p>
                     <h3>Why the list scrolls</h3>
                     <p>
-                        A quick settings menu has no scrolling of its own: measured on a
+                        A Quick Settings menu has no scrolling of its own: measured on a
                         1080p screen, thirty profiles want 1296px of a 1048px work area
                         and the rest is clipped. GNOME’s Wi-Fi menu shows eight networks
                         and sends you to Settings for the rest, which suits a list you
@@ -1360,12 +1360,12 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                         <pre
                             tabindex="0"
                         ><span class="p">$ </span><span class="k">git</span> switch main &amp;&amp; git pull
-<span class="p">$ </span><span class="k">git</span> tag -a v0.2.0 -m 'release v0.2.0'
-<span class="p">$ </span><span class="k">git</span> push origin v0.2.0</pre>
+<span class="p">$ </span><span class="k">git</span> tag -a v0.1.2 -m 'release v0.1.2'
+<span class="p">$ </span><span class="k">git</span> push origin v0.1.2</pre>
                     </div>
                     <p>
                         The release workflow checks the tag against both files before
-                        building anything — otherwise a release titled v0.2.0 could ship
+                        building anything — otherwise a release titled v0.1.2 could ship
                         a zip that tells GNOME it is 0.1.0 — and runs the full suite
                         before it publishes.
                     </p>
@@ -1391,7 +1391,7 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
 <span class="k">just</span> test-docs   <span class="c"># this site, in Chromium and Firefox</span>
 <span class="k">just</span> lint        <span class="c"># eslint, prettier, gschema, shellcheck</span>
 <span class="k">just</span> security    <span class="c"># gitleaks, trivy, osv-scanner, actionlint, zizmor</span>
-<span class="k">just</span> ci          <span class="c"># what CI runs: lint, tests, security, build</span>
+<span class="k">just</span> ci          <span class="c"># what CI runs: lint, tests, test-docs, security, build</span>
 <span class="k">just</span> test-live   <span class="c"># headless gnome-shell, then the packer check</span>
 <span class="k">just</span> fixtures 5  <span class="c"># throwaway profiles for the menu and watcher</span>
 <span class="k">just</span> run         <span class="c"># a gnome-shell in a window (needs mutter-devkit)</span>
@@ -1423,7 +1423,7 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
             <nav aria-label="Footer">
                 <ul>
                     <li>
-                        <a href="https://ghost-assembly.github.io/">All projects</a>
+                        <a href="https://ghost-assembly.com/">All projects</a>
                     </li>
                     <li>
                         <a href="https://github.com/Ghost-Assembly/quickrem">Source</a>

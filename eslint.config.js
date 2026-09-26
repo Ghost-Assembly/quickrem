@@ -10,6 +10,11 @@ import security from 'eslint-plugin-security';
 // no document, no localStorage, no fetch and no DOM. Declaring the browser set
 // tells ESLint those names are defined, so a typo that reaches for one is
 // accepted silently and fails only at runtime inside the Shell.
+//
+// Every name below was checked against the running interpreter with
+// `gjs -c 'print(typeof globalThis.<name>)'` on gjs 1.88.1. Four names that a
+// browser would provide are absent and must stay absent from this list:
+// `fetch`, `structuredClone`, `queueMicrotask` and `AbortController`.
 const gjsGlobals = {
     ARGV: 'readonly',
     imports: 'readonly',
@@ -29,8 +34,6 @@ const gjsGlobals = {
     setInterval: 'readonly',
     clearTimeout: 'readonly',
     clearInterval: 'readonly',
-    queueMicrotask: 'readonly',
-    structuredClone: 'readonly',
     TextEncoder: 'readonly',
     TextDecoder: 'readonly',
 };
@@ -52,6 +55,16 @@ export default [
         },
     },
     {
+        // scripts/*.js run under plain gjs, outside gnome-shell, so they get
+        // the GJS globals but not `global`.
+        files: ['scripts/*.js'],
+        languageOptions: {
+            ecmaVersion: 2022,
+            sourceType: 'module',
+            globals: gjsGlobals,
+        },
+    },
+    {
         // Tooling and tests: run on Node.
         files: ['tests/**/*.js', '*.config.js', 'eslint.config.js'],
         languageOptions: {
@@ -67,8 +80,9 @@ export default [
         },
     },
     {
-        // The docs suite: Node for the runner, and the browser for the
-        // callbacks it evaluates inside the page.
+        // The docs site's browser suite: Node, plus the callbacks it hands to
+        // page.evaluate(), which run in the page. Scoped to this file alone;
+        // extension code must never see browser globals (see the top).
         files: ['tests/**/*.spec.js'],
         languageOptions: {
             globals: { ...globals.node, ...globals.browser },

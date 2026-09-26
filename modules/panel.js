@@ -212,6 +212,10 @@ const RemminaToggle = GObject.registerClass(
             // menu when the menu is destroyed.
             const open = this.menu.open.bind(this.menu);
             this.menu.open = animate => {
+                // The Shell never destroys a toggle's menu (see destroy()
+                // below), so it keeps calling this wrapper after destroy()
+                // has already let go of _section.
+                if (!this._section) return;
                 if (!this.menu.isOpen) this._section.updateHeight();
                 open(animate);
             };
@@ -319,23 +323,19 @@ const RemminaToggle = GObject.registerClass(
          *   is empty: no Remmina at all, or a Remmina with nothing saved yet.
          */
         _emptyItem() {
-            // Nothing found at all is something the user can act on, so that
-            // item opens the preferences where the directory can be set. An
-            // empty but valid directory is not — Open Remmina… below it is the
-            // useful action — so that one stays inert.
-            if (this._store.source === 'none') {
-                return this._onActivate(
-                    new PopupMenu.PopupMenuItem(_('Remmina not found')),
-                    () => this._extension.openPreferences(),
-                );
-            }
+            // Nothing found at all, or a directory setting that does not
+            // parse, is something the user can act on, so that item opens the
+            // preferences where it can be fixed. An empty but valid directory
+            // is not — Open Remmina… below it is the useful action — so that
+            // one stays inert.
+            const label = {
+                none: _('Remmina not found'),
+                invalid: _('Profile directory setting is invalid'),
+            }[this._store.source];
 
-            if (this._store.source === 'invalid') {
-                return this._onActivate(
-                    new PopupMenu.PopupMenuItem(
-                        _('Profile directory setting is invalid'),
-                    ),
-                    () => this._extension.openPreferences(),
+            if (label !== undefined) {
+                return this._onActivate(new PopupMenu.PopupMenuItem(label), () =>
+                    this._extension.openPreferences(),
                 );
             }
 

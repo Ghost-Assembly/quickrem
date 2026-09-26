@@ -2,10 +2,6 @@
 #
 # `just security` runs `gitleaks detect`, which scans committed history, so a
 # false positive here fails CI on every push rather than once.
-#
-# QuickRem never reads Remmina's encrypted password fields — modules/profiles.js
-# drops them while parsing — so no profile secret can reach the tree. The two
-# allowlists below cover the only things that look like one.
 
 [extend]
 useDefault = true
@@ -16,5 +12,5 @@ paths = ['''^sonar-project\.properties$''']
 regexes = ['''sonar\.(projectKey|organization)\s*=.*''']
 
 [[allowlists]]
-description = "Test fixtures for modules/profiles.js contain fake password, secret and passphrase keys on purpose: they are what proves the parser drops them. The values are literal placeholders, not credentials."
+description = "Unit tests feed parsers fake password, secret and passphrase keys on purpose: they are what proves a parser drops them. The values are literal placeholders, not credentials."
 paths = ['''^tests/.*\.test\.js$''']

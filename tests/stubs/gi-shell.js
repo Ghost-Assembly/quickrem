@@ -1,9 +1,6 @@
-// Stand-in for gi://Shell, wired up by the aliases in vitest.config.js.
-//
-// Only Shell.AppSystem, which modules/launch.js uses to find Remmina's own
-// desktop entry.
+// Shell, as far as the extension uses it.
 
-/** Desktop ids the app system should know about. Tests populate this. */
+/** Desktop ids Shell.AppSystem should know about. Tests populate this. */
 export const apps = new Map();
 
 /** Every Shell.App.activate() call, in order. */
@@ -26,6 +23,8 @@ export function registerApp(id) {
 }
 
 export default {
+    ActionMode: { NONE: 0, NORMAL: 1, OVERVIEW: 2 },
+
     AppSystem: {
         get_default: () => ({
             /**

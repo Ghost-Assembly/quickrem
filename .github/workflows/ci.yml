@@ -38,5 +38,5 @@ jobs:
             - name: Install test browsers
               run: npx playwright install --with-deps chromium firefox
 
-            # The same recipe a developer runs: lint, test, security, build.
+            # The same recipe a developer runs: lint, test, test-docs, security, build.
             - run: just ci
