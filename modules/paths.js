@@ -183,13 +183,16 @@ export function expandOverride(value, home) {
 /**
  * Read `datadir_path` from the first remmina.pref that can be read.
  *
- * Both callers need this and they read files differently — the Shell must not
- * block the compositor, the preferences process can read synchronously — so the
- * reader is passed in and only the rule lives here. That rule is: a file we
- * cannot read is skipped, and the first one we *can* read decides, even when it
- * has no `datadir_path`. A native install's preferences are authoritative for a
- * native install; a datadir configured in the Flatpak's copy says nothing about
- * where the native binary looks.
+ * paths.js imports nothing — not even modules/io.js, whose async `readText`
+ * this needs — so it stays loadable by Vitest on plain Node and by the
+ * preferences process's own script. The reader is injected instead: the one
+ * direct caller, modules/detect.js, is shared by the Shell and the
+ * preferences window alike, so both get their `readText` from there, and a
+ * test can fake it without touching a filesystem. Only the rule lives here.
+ * That rule is: a file we cannot read is skipped, and the first one we *can*
+ * read decides, even when it has no `datadir_path`. A native install's
+ * preferences are authoritative for a native install; a datadir configured in
+ * the Flatpak's copy says nothing about where the native binary looks.
  *
  * @param {Array<string>} candidates Paths to try, in order.
  * @param {Function} readText Async, returns the file's text or throws.

@@ -960,11 +960,16 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                             <tr>
                                 <td data-label="Setting">Launch command</td>
                                 <td data-label="Empty means">
-                                    Use the <code>application/x-remmina</code> handler
+                                    Open a profile with the
+                                    <code>application/x-remmina</code> handler
                                 </td>
                                 <td data-label="Notes" class="muted">
                                     For an unusual install. The profile path is appended
-                                    as its own argument.
+                                    as its own argument. With it empty,
+                                    <em>Open Remmina…</em> goes through
+                                    <code>org.remmina.Remmina.desktop</code> via
+                                    <code>Shell.AppSystem</code>; a command set here is
+                                    used for both.
                                 </td>
                             </tr>
                         </tbody>
