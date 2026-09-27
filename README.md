@@ -68,16 +68,18 @@ the extension does not exist. Log out and back in, then it works.
 shows which directory QuickRem resolved and how, so a wrong guess is visible
 rather than silent.
 
-| Setting           | Empty means                                                        |
-| ----------------- | ------------------------------------------------------------------ |
-| Profile directory | Detect it: `datadir_path`, then a native install, then the Flatpak |
-| Launch command    | Use the handler registered for `application/x-remmina`             |
+| Setting           | Empty means                                                               |
+| ----------------- | ------------------------------------------------------------------------- |
+| Profile directory | Detect it: `datadir_path`, then a native install, then the Flatpak        |
+| Launch command    | Open a profile through the handler registered for `application/x-remmina` |
 
 A profile directory must be an absolute path or start with `~/`; anything else
 is reported in that first row rather than guessed at.
 
 `Launch command` is the escape hatch for an unusual install. The profile path is
-appended as a separate argument, never interpolated into the string.
+appended as a separate argument, never interpolated into the string. That empty
+default is for opening a _profile_; `Open Remmina…`, with no profile, always
+goes through `org.remmina.Remmina.desktop` via `Shell.AppSystem` instead.
 
 ## Development
 
