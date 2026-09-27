@@ -134,7 +134,7 @@ describe('disable', () => {
         // means it also never lets go of a reference to it. Its own
         // open-state-changed handler, still attached, can call the wrapped
         // open() this toggle installed — and that wrapper reached into
-        // `this._section`, which destroy() had already set to null.
+        // `this._section`, which _onDestroy() had already set to null.
         const { indicator, toggle } = enable(new FakeStore({ profiles: profiles(3) }));
         const menu = toggle.menu;
 
