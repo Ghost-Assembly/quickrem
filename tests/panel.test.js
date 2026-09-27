@@ -109,6 +109,26 @@ describe('disable', () => {
         expect(menu.handlerCount).toBe(1);
     });
 
+    it('releases everything when the Shell destroys the toggle actor directly', () => {
+        // A C-side destroy — the Shell disposing the actor tree itself,
+        // rather than any JS code calling destroy() — never calls a JS
+        // destroy() override, only the 'destroy' signal. Faked here by
+        // emitting it directly instead of calling toggle.destroy() or
+        // indicator.destroy().
+        const store = new FakeStore({ profiles: profiles(3) });
+        const baseline = overlay().get_n_children();
+        const { toggle } = enable(store);
+        const menu = toggle.menu;
+        expect(overlay().get_n_children()).toBe(baseline + 1);
+
+        toggle.emit('destroy');
+
+        expect(store.handlerCount).toBe(0);
+        // Only the Shell's own handler, which it never disconnects, remains.
+        expect(menu.handlerCount).toBe(1);
+        expect(overlay().get_n_children()).toBe(baseline);
+    });
+
     it('survives the Shell calling the wrapped open() after destroy', () => {
         // The Shell never destroys a toggle's menu (see the test above), which
         // means it also never lets go of a reference to it. Its own

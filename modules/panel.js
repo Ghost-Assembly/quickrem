@@ -212,9 +212,9 @@ const RemminaToggle = GObject.registerClass(
             // menu when the menu is destroyed.
             const open = this.menu.open.bind(this.menu);
             this.menu.open = animate => {
-                // The Shell never destroys a toggle's menu (see destroy()
-                // below), so it keeps calling this wrapper after destroy()
-                // has already let go of _section.
+                // The Shell never destroys a toggle's menu (see _onDestroy()
+                // below), so it keeps calling this wrapper after the toggle's
+                // own destroy has already let go of _section.
                 if (!this._section) return;
                 if (!this.menu.isOpen) this._section.updateHeight();
                 open(animate);
@@ -249,6 +249,11 @@ const RemminaToggle = GObject.registerClass(
             // Remmina, and _emptyItem() switches on it — and fires once when
             // both move, so a resolve rebuilds the menu once rather than twice.
             store.connectObject('changed', () => this._rebuild(), this);
+
+            // A plain connect, as ButtonBox does: connectObject with this as
+            // its own owner could be released by the destroy it is meant to
+            // handle.
+            this.connect('destroy', () => this._onDestroy());
 
             this._rebuild();
         }
@@ -348,7 +353,9 @@ const RemminaToggle = GObject.registerClass(
             });
         }
 
-        destroy() {
+        // From the destroy signal rather than a destroy() override, which an
+        // actor destroyed from C never calls.
+        _onDestroy() {
             this.menu.disconnectObject(this);
             this._store?.disconnectObject(this);
             this._store = null;
@@ -362,8 +369,6 @@ const RemminaToggle = GObject.registerClass(
             // so every screen lock — leaked one menu with its rows and focus
             // group; measured, the overlay went from 14 children to 15 to 16.
             this.menu.destroy();
-
-            super.destroy();
         }
     },
 );
