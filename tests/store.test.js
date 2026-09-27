@@ -480,6 +480,30 @@ describe('destroy', () => {
         store.destroy();
         expect(() => store.destroy()).not.toThrow();
     });
+
+    it('does not let a rescan already under way publish after it', async () => {
+        // The debounce fires and starts moving the watch before destroy() can
+        // run, so the rescan it leads to has to notice the destroy on its own
+        // — the same race _resolve() already guards against.
+        fs.mkdir(FLATPAK_DATA);
+        writeProfile('a.remmina', { name: 'A' });
+        const store = await newStore();
+
+        let changes = 0;
+        store.connect('changed', () => changes++);
+        const enumeratorCount = enumerators.length;
+
+        monitorOn(FLATPAK_DATA).fire();
+        runTimeouts();
+        store.destroy();
+
+        writeProfile('b.remmina', { name: 'B' });
+        await settle();
+
+        expect(store.profiles).toEqual([]);
+        expect(enumerators.length).toBe(enumeratorCount);
+        expect(changes).toBe(0);
+    });
 });
 
 describe('scanning hygiene', () => {

@@ -342,10 +342,18 @@ export const ProfileStore = GObject.registerClass(
 
         /** A burst of profile-directory events has gone quiet. */
         _onRefreshTimeout() {
+            // Captured before _watch() so a destroy() landing while it awaits
+            // — the same race _resolve() guards against — is noticed before
+            // the rescan it would otherwise start.
+            const generation = this._generation;
+
             // The event may have been the profile directory itself being
             // created, so move the watch onto it before scanning.
             this._watch()
-                .then(() => this._refresh())
+                .then(() => {
+                    if (generation !== this._generation) return;
+                    return this._refresh();
+                })
                 .catch(error => console.warn(`[quickrem] rescan failed: ${error}`));
         }
 
