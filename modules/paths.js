@@ -183,10 +183,12 @@ export function expandOverride(value, home) {
 /**
  * Read `datadir_path` from the first remmina.pref that can be read.
  *
- * Both callers use asynchronous I/O — the Shell must not block the compositor,
- * and the preferences process reads through the same async modules/io.js — so
- * the reader is injected rather than called directly here, which is also what
- * lets a test fake it without touching a filesystem. Only the rule lives here.
+ * paths.js imports nothing — not even modules/io.js, whose async `readText`
+ * this needs — so it stays loadable by Vitest on plain Node and by the
+ * preferences process's own script. The reader is injected instead: the one
+ * direct caller, modules/detect.js, is shared by the Shell and the
+ * preferences window alike, so both get their `readText` from there, and a
+ * test can fake it without touching a filesystem. Only the rule lives here.
  * That rule is: a file we cannot read is skipped, and the first one we *can*
  * read decides, even when it has no `datadir_path`. A native install's
  * preferences are authoritative for a native install; a datadir configured in
