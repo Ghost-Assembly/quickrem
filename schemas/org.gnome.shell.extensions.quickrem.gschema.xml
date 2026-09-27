@@ -20,9 +20,9 @@
                 Command used to start Remmina. The profile path is appended as a
                 final argument when opening a saved connection. Leave empty to
                 open a profile through the application registered to handle
-                application/x-remmina; opening Remmina with no profile always
-                goes through org.remmina.Remmina.desktop via Shell.AppSystem
-                instead.
+                application/x-remmina, and Remmina itself through
+                org.remmina.Remmina.desktop via Shell.AppSystem. A command set
+                here is used for both instead.
             </description>
         </key>
     </schema>

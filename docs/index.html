@@ -965,10 +965,11 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                                 </td>
                                 <td data-label="Notes" class="muted">
                                     For an unusual install. The profile path is appended
-                                    as its own argument. <em>Open Remmina…</em>, with no
-                                    profile, always goes through
+                                    as its own argument. With it empty,
+                                    <em>Open Remmina…</em> goes through
                                     <code>org.remmina.Remmina.desktop</code> via
-                                    <code>Shell.AppSystem</code> instead.
+                                    <code>Shell.AppSystem</code>; a command set here is
+                                    used for both.
                                 </td>
                             </tr>
                         </tbody>
