@@ -648,7 +648,12 @@ describe('scanning hygiene', () => {
 describe('when a probe throws something other than a missing file', () => {
     it('logs and stays inert when a rescan fails outright', async () => {
         fs.mkdir(FLATPAK_DATA);
+        writeProfile('a.remmina', { name: 'A' });
         const store = await newStore();
+        expect(store.profiles.map(p => p.name)).toEqual(['A']);
+
+        let changes = 0;
+        store.connect('changed', () => changes++);
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         // _watch() calls nearestExisting(), which query_info_async()s its way
         // up from the directory itself — the one call this rescan makes.
@@ -661,7 +666,9 @@ describe('when a probe throws something other than a missing file', () => {
         await settle();
 
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('rescan failed'));
-        expect(store.profiles).toEqual([]);
+        // The failed rescan must not touch what was already published.
+        expect(store.profiles.map(p => p.name)).toEqual(['A']);
+        expect(changes).toBe(0);
         query.mockRestore();
         warn.mockRestore();
     });
