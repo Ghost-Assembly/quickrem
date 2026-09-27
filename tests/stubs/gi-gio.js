@@ -65,6 +65,9 @@ export const fs = {
     /** Paths that exist but refuse to be read. */
     unreadable: new Set(),
 
+    /** Paths that exist but refuse to be watched. */
+    unwatchable: new Set(),
+
     /** Special files something opened, which the real platform punishes. */
     openedSpecial: [],
 
@@ -72,6 +75,7 @@ export const fs = {
     reset() {
         this.entries.clear();
         this.unreadable.clear();
+        this.unwatchable.clear();
         this.openedSpecial.length = 0;
         this.entries.set('/', { type: 'dir', text: '' });
     },
@@ -427,6 +431,9 @@ class GioFile {
      * @returns {FileMonitor} A monitor, recorded in `monitors`.
      */
     monitor_directory(_flags) {
+        if (fs.unwatchable.has(this.path))
+            throw new GioError(IOErrorEnum.PERMISSION_DENIED, `${this.path} denied`);
+
         const monitor = new FileMonitor(this.path);
         monitors.push(monitor);
         return monitor;
@@ -479,6 +486,9 @@ class GioFile {
      */
     async enumerate_children_async(_attributes, _flags, _priority, cancellable) {
         throwIfCanceled(cancellable);
+
+        if (fs.unreadable.has(this.path))
+            throw new GioError(IOErrorEnum.PERMISSION_DENIED, `${this.path} denied`);
 
         const entry = fs.resolve(this.path);
         if (!entry || entry.type !== 'dir')

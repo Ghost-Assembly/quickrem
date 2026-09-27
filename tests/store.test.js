@@ -173,6 +173,22 @@ describe('watching', () => {
         expect(monitorOn(FLATPAK_DATA)).toBeDefined();
     });
 
+    it('logs and carries on when the directory cannot be watched', async () => {
+        fs.mkdir(FLATPAK_DATA);
+        writeProfile('a.remmina', { name: 'A' });
+        fs.unwatchable.add(FLATPAK_DATA);
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const store = await newStore();
+
+        expect(monitorOn(FLATPAK_DATA)).toBeUndefined();
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining(FLATPAK_DATA));
+        // A monitor that could not be installed must not cost the scan: the
+        // directory is still read even though nothing can watch it for changes.
+        expect(store.profiles.map(p => p.name)).toEqual(['A']);
+        warn.mockRestore();
+    });
+
     it('watches the nearest existing ancestor when it does not, then moves on', async () => {
         // A fresh Remmina install has the app directory but no profile
         // directory. Watching the ancestor is what makes it appearing an event.
@@ -581,6 +597,19 @@ describe('scanning hygiene', () => {
         expect(store.profiles.map(p => p.name)).toEqual(['Good']);
     });
 
+    it('logs and reports no profiles when the whole directory cannot be read', async () => {
+        fs.unreadable.add(FLATPAK_DATA);
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const store = await newStore();
+
+        expect(store.profiles).toEqual([]);
+        expect(warn).toHaveBeenCalledWith(
+            expect.stringContaining(`could not read ${FLATPAK_DATA}`),
+        );
+        warn.mockRestore();
+    });
+
     it('does not rebuild the menu when a rescan finds nothing new', async () => {
         writeProfile('a.remmina', { name: 'Stable' });
         const store = await newStore();
@@ -613,5 +642,46 @@ describe('scanning hygiene', () => {
 
         expect(notifications).toBe(1);
         expect(store.profiles.map(p => p.name)).toEqual(['New', 'Stable']);
+    });
+});
+
+describe('when a probe throws something other than a missing file', () => {
+    it('logs and stays inert when a rescan fails outright', async () => {
+        fs.mkdir(FLATPAK_DATA);
+        const store = await newStore();
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        // _watch() calls nearestExisting(), which query_info_async()s its way
+        // up from the directory itself — the one call this rescan makes.
+        const query = vi
+            .spyOn(Gio.File.prototype, 'query_info_async')
+            .mockRejectedValueOnce(new Error('boom'));
+
+        monitorOn(FLATPAK_DATA).fire();
+        runTimeouts();
+        await settle();
+
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('rescan failed'));
+        expect(store.profiles).toEqual([]);
+        query.mockRestore();
+        warn.mockRestore();
+    });
+
+    it('logs and stays inert when reload() cannot resolve the directory', async () => {
+        // Emptied so isProgramInPath() makes no query_info_async calls of its
+        // own, leaving the mocked rejection to pathExists() alone.
+        env.variables.set('PATH', '');
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const query = vi
+            .spyOn(Gio.File.prototype, 'query_info_async')
+            .mockRejectedValueOnce(new Error('boom'));
+
+        new ProfileStore(new FakeSettings());
+        await settle();
+
+        expect(warn).toHaveBeenCalledWith(
+            expect.stringContaining('could not resolve the profile directory'),
+        );
+        query.mockRestore();
+        warn.mockRestore();
     });
 });
