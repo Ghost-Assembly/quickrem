@@ -1,5 +1,6 @@
 """Behavior regressions for canonical tooling and publication boundaries."""
 
+import hashlib
 import importlib.util
 import io
 import json
@@ -30,6 +31,58 @@ bundle = load("build")
 docs = load("docs")
 workflow = load("workflow_lint")
 security = load("security_source")
+
+
+class GitleaksTests(unittest.TestCase):
+    def test_public_project_identity_cannot_exempt_credentials_or_other_contexts(self) -> None:
+        public_id = "napalm255_tiler"
+        fixture = hashlib.sha256(b"nonfunctional scanner regression fixture").hexdigest()[:40]
+        vendor_fixture = "squ_" + fixture
+        cases = [
+            ("public identity", "sonar-project.properties", "sonar.projectKey", public_id, 0),
+            ("other identity", "sonar-project.properties", "sonar.projectKey", fixture, 1),
+            ("credential", "sonar-project.properties", "sonar.token", fixture, 1),
+            ("public value as credential", "sonar-project.properties", "token", public_id, 1),
+            ("other file", "other.properties", "sonar.projectKey", public_id, 1),
+            (
+                "vendor credential",
+                "sonar-project.properties",
+                "sonar.projectKey",
+                vendor_fixture,
+                1,
+            ),
+            (
+                "appended credential",
+                "sonar-project.properties",
+                "sonar.projectKey",
+                public_id + " token=" + fixture,
+                1,
+            ),
+        ]
+        for name, path, property_name, value, expected in cases:
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as work:
+                root = Path(work)
+                (root / path).write_text(f"{property_name}={value}\n")
+
+                result = subprocess.run(
+                    [
+                        "/usr/bin/env",
+                        "gitleaks",
+                        "dir",
+                        "--redact",
+                        "--no-banner",
+                        "--no-color",
+                        ".",
+                    ],
+                    cwd=root,
+                    env={**os.environ, "GITLEAKS_CONFIG": str(ROOT / ".gitleaks.toml")},
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=30,
+                )
+
+                self.assertEqual(result.returncode, expected, result.stderr)
 
 
 class SecuritySourceTests(unittest.TestCase):

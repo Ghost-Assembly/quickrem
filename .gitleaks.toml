@@ -1,2 +1,12 @@
 [extend]
 useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Recognize QuickTiler's historical public Sonar project identifier"
+condition = "AND"
+regexTarget = "match"
+paths = ['''^sonar-project\.properties$''']
+regexes = ['''^sonar\.projectKey=napalm255_tiler$''']
