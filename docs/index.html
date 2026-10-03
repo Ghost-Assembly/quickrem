@@ -1194,9 +1194,9 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                     <p>
                         just test runs the JavaScript suite with Vitest, the shared
                         tooling tests, and any project-specific offline suites. just
-                        coverage reports the JavaScript coverage universe, including
-                        untested runtime files. Test stubs and generated reports are not
-                        runtime source.
+                        coverage reports runtime JavaScript and Python tooling coverage,
+                        including untested files. Test stubs and generated reports are
+                        not runtime source.
                     </p>
                     <p>
                         just test-docs runs Playwright and axe in Chromium and Firefox:
@@ -1332,7 +1332,7 @@ just pack-check</code></pre>
 just fmt          # format source and configuration
 just lint         # verify template, generated docs, source, and schemas
 just test         # JavaScript, Python, and project offline tests
-just coverage     # report JavaScript coverage without source exclusions
+just coverage     # report JavaScript and Python coverage without source exclusions
 just test-docs    # Chromium and Firefox documentation checks
 just security     # dependencies, secrets, and workflow checks
 just build        # build the runtime-only extension ZIP

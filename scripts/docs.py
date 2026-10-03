@@ -14,7 +14,7 @@ COMMANDS = """just setup        # install pinned tools, dependencies, and browse
 just fmt          # format source and configuration
 just lint         # verify template, generated docs, source, and schemas
 just test         # JavaScript, Python, and project offline tests
-just coverage     # report JavaScript coverage without source exclusions
+just coverage     # report JavaScript and Python coverage without source exclusions
 just test-docs    # Chromium and Firefox documentation checks
 just security     # dependencies, secrets, and workflow checks
 just build        # build the runtime-only extension ZIP
@@ -107,7 +107,7 @@ def blocks(metadata: dict, project: dict) -> dict[str, list[tuple[str, str]]]:
                 (
                     "just test runs the JavaScript suite with Vitest, the shared tooling "
                     "tests, and any project-specific offline suites. just coverage reports "
-                    "the JavaScript coverage universe, including untested runtime files. Test"
+                    "runtime JavaScript and Python tooling coverage, including untested files. Test"
                     " stubs and generated reports are not runtime source."
                 ),
             ),

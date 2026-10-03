@@ -176,7 +176,7 @@ From a clone, just uninstall performs the same steps. Disabling with just disabl
 
 <!-- quick-template:testing:start -->
 
-just test runs the JavaScript suite with Vitest, the shared tooling tests, and any project-specific offline suites. just coverage reports the JavaScript coverage universe, including untested runtime files. Test stubs and generated reports are not runtime source.
+just test runs the JavaScript suite with Vitest, the shared tooling tests, and any project-specific offline suites. just coverage reports runtime JavaScript and Python tooling coverage, including untested files. Test stubs and generated reports are not runtime source.
 
 just test-docs runs Playwright and axe in Chromium and Firefox: dark and light accessibility checks, keyboard navigation, mobile layout, reduced motion, links, metadata, local assets, and no page JavaScript. Automated accessibility checks still require human review of reading and focus order.
 
@@ -221,7 +221,7 @@ just setup        # install pinned tools, dependencies, and browsers
 just fmt          # format source and configuration
 just lint         # verify template, generated docs, source, and schemas
 just test         # JavaScript, Python, and project offline tests
-just coverage     # report JavaScript coverage without source exclusions
+just coverage     # report JavaScript and Python coverage without source exclusions
 just test-docs    # Chromium and Firefox documentation checks
 just security     # dependencies, secrets, and workflow checks
 just build        # build the runtime-only extension ZIP

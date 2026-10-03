@@ -11,7 +11,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,6 +32,7 @@ bundle = load("build")
 docs = load("docs")
 workflow = load("workflow_lint")
 security = load("security_source")
+clean = load("clean")
 
 
 class GitleaksTests(unittest.TestCase):
@@ -120,6 +121,28 @@ class SecuritySourceTests(unittest.TestCase):
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_cli_preserves_real_actionlint_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work)
+            directory = root / ".github/workflows"
+            directory.mkdir(parents=True)
+            with (
+                patch.object(sys, "argv", ["workflow_lint.py", work]),
+                patch("sys.stdout", new=io.StringIO()),
+            ):
+                with self.assertRaisesRegex(ValueError, "No workflows found"):
+                    workflow.main()
+                path = directory / "ci.yml"
+                path.write_text(
+                    "name: Fixture\non: workflow_dispatch\njobs:\n"
+                    "  check:\n    runs-on: ubuntu-24.04\n    steps:\n"
+                    "      - run: echo fixture\n"
+                )
+                workflow.main()
+                path.write_text(path.read_text().replace("runs-on: ubuntu-24.04", "invalid: true"))
+                with self.assertRaises(subprocess.CalledProcessError):
+                    workflow.main()
+
     def test_only_self_repository_uses_are_adapted(self) -> None:
         source = "    uses: $/.github/workflows/ci.yml\n    run: echo '$/unchanged'\n"
         self.assertEqual(
@@ -133,6 +156,104 @@ class WorkflowTests(unittest.TestCase):
 
 
 class TemplateTests(unittest.TestCase):
+    def test_sync_check_and_release_status_preserve_project_identity(self) -> None:
+        sha = "a" * 40
+        files = {
+            "justfile": b"canonical commands",
+            "scripts/template.py": b"canonical helper",
+            "package.json": b'{"name":"template","version":"1.0.0"}',
+            "package-lock.json": b'{"name":"template","version":"1.0.0","packages":{"":{}}}',
+        }
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work)
+            identity = {"name": "quickfixture", "version": "2.0.0"}
+            (root / "package.json").write_text(json.dumps(identity))
+            (root / "quick-template.lock.json").write_text(
+                json.dumps({"repository": template.REPOSITORY, "revision": sha})
+            )
+            with (
+                patch.object(template, "ROOT", root),
+                patch.object(template, "source_files", return_value=files),
+                patch("sys.stdout", new=io.StringIO()),
+            ):
+                with patch.object(sys, "argv", ["template.py", "sync", sha]):
+                    template.main()
+                self.assertEqual(json.loads((root / "package.json").read_text()), identity)
+                lock = json.loads((root / "package-lock.json").read_text())
+                self.assertEqual(lock["packages"][""], identity)
+                self.assertEqual(template.compare(root, template.expected_files(root, files)), [])
+                with patch.object(sys, "argv", ["template.py", "check"]):
+                    template.main()
+                    (root / "justfile").write_text("local drift")
+                    with self.assertRaisesRegex(SystemExit, "Template drift"):
+                        template.main()
+                with (
+                    patch.object(sys, "argv", ["template.py", "status"]),
+                    patch.object(
+                        template,
+                        "download",
+                        return_value=json.dumps({"target_commitish": sha}).encode(),
+                    ),
+                ):
+                    template.main()
+                with (
+                    patch.object(sys, "argv", ["template.py", "status"]),
+                    patch.object(
+                        template,
+                        "download",
+                        return_value=json.dumps({"target_commitish": "b" * 40}).encode(),
+                    ),
+                    self.assertRaisesRegex(SystemExit, "Template update available"),
+                ):
+                    template.main()
+
+    def test_sync_cannot_write_through_a_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work) / "repo"
+            root.mkdir()
+            (root / "package.json").write_text('{"name":"quickfixture","version":"1.0.0"}')
+            outside = Path(work) / "outside"
+            outside.write_text("private fixture")
+            (root / "alias").symlink_to(outside)
+            files = {
+                "alias": b"replacement",
+                "package.json": b'{"name":"template","version":"1.0.0"}',
+                "package-lock.json": b'{"name":"template","version":"1.0.0","packages":{"":{}}}',
+            }
+            with self.assertRaises(ValueError):
+                template.synchronize(root, "a" * 40, files)
+            self.assertEqual(outside.read_text(), "private fixture")
+
+    def test_local_source_override_is_rejected_in_ci(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            payload = Path(work) / "template"
+            payload.mkdir()
+            (payload / "justfile").write_text("local commands")
+            (payload / "__pycache__").mkdir()
+            (payload / "__pycache__/cache.pyc").write_bytes(b"generated")
+            with patch.dict(os.environ, {"QUICK_TEMPLATE_SOURCE": work, "CI": ""}):
+                self.assertEqual(template.source_files("a" * 40), {"justfile": b"local commands"})
+                with patch.dict(os.environ, {"CI": "true"}), self.assertRaises(ValueError):
+                    template.source_files("a" * 40)
+
+    def test_archive_rejects_paths_that_escape_the_payload_and_incomplete_content(self) -> None:
+        sha = "a" * 40
+        for names in [["../outside"], ["justfile"]]:
+            data = io.BytesIO()
+            with zipfile.ZipFile(data, "w") as archive:
+                for name in names:
+                    archive.writestr(f"quick-template-{sha}/template/{name}", b"fixture")
+            with (
+                self.subTest(names=names),
+                tempfile.TemporaryDirectory() as work,
+                patch.dict(
+                    os.environ, {"XDG_CACHE_HOME": work, "QUICK_TEMPLATE_SOURCE": "", "CI": "true"}
+                ),
+                patch.object(template, "download", return_value=data.getvalue()),
+                self.assertRaises(ValueError),
+            ):
+                template.source_files(sha)
+
     def test_corrupt_archive_cache_is_recovered_and_reused(self) -> None:
         sha = "a" * 40
         buffer = io.BytesIO()
@@ -265,7 +386,91 @@ class SonarTests(unittest.TestCase):
             gate.validate(self.measures(), "previous", "current")
 
 
+class TransportTests(unittest.TestCase):
+    def test_https_clients_fail_closed_and_close_connections(self) -> None:
+        def fetch(client):
+            if client is gate:
+                return gate.request("fixture", {"project": "fixture with space"})
+            return template.download("codeload.github.com", "/fixture")
+
+        credential = hashlib.sha256(b"nonfunctional HTTP credential fixture").hexdigest()
+        for module, limit in [(gate, 4 * 1024 * 1024), (template, 8 * 1024 * 1024)]:
+            for status, data, error in [
+                (200, b'{"fixture":true}', None),
+                (403, b"denied", RuntimeError),
+                (200, b"x" * (limit + 1), ValueError),
+            ]:
+                connection = Mock()
+                response = connection.getresponse.return_value
+                response.status = status
+                response.read.return_value = data
+                with (
+                    self.subTest(
+                        client=module.__name__, status=status, oversized=len(data) > limit
+                    ),
+                    patch.dict(os.environ, {"SONAR_TOKEN": credential}),
+                    patch.object(module.http.client, "HTTPSConnection", return_value=connection),
+                ):
+                    if error:
+                        with self.assertRaises(error):
+                            fetch(module)
+                    elif module is gate:
+                        self.assertEqual(fetch(module), {"fixture": True})
+                        path = connection.request.call_args.args[1]
+                        self.assertIn("project=fixture+with+space", path)
+                        self.assertNotIn(credential, path)
+                    else:
+                        self.assertEqual(fetch(module), data)
+                    connection.close.assert_called_once()
+        with patch.dict(os.environ, {"SONAR_TOKEN": ""}), self.assertRaises(ValueError):
+            gate.request("fixture", {})
+        with self.assertRaises(ValueError):
+            template.download("untrusted.example.test", "/fixture")
+
+
 class PackagingTests(unittest.TestCase):
+    def test_packages_are_deterministic_and_detect_content_or_inventory_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work)
+            files = {
+                "metadata.json": json.dumps({"uuid": "fixture@example.test"}).encode(),
+                "extension.js": b"runtime extension",
+                "prefs.js": b"runtime preferences",
+                "LICENSE": b"fixture license",
+                "modules/model.js": b"runtime model",
+            }
+            for name, content in files.items():
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+            (root / ".env").write_text("private fixture")
+            (root / "quick-project.json").write_text(json.dumps({"runtimeFiles": list(files)}))
+
+            def pack(command: list[str], **kwargs) -> None:
+                if command[0] == "/usr/bin/gnome-extensions":
+                    destination = kwargs["cwd"] / "packed" / bundle.artifact_name(root)
+                    with zipfile.ZipFile(destination, "w") as archive:
+                        for name, content in files.items():
+                            archive.writestr(name, content)
+
+            with patch.object(bundle.subprocess, "run", side_effect=pack):
+                artifact = bundle.build(root)
+                first = artifact.read_bytes()
+                self.assertEqual(bundle.build(root).read_bytes(), first)
+                with zipfile.ZipFile(artifact) as archive:
+                    self.assertEqual(set(archive.namelist()), set(files))
+                    self.assertEqual(archive.read("modules/model.js"), files["modules/model.js"])
+                with patch("sys.stdout", new=io.StringIO()):
+                    bundle.check(root)
+                for name in ["modules/model.js", "unexpected.js"]:
+                    with zipfile.ZipFile(artifact, "w") as archive:
+                        for path, content in files.items():
+                            archive.writestr(path, b"changed" if path == name else content)
+                        if name not in files:
+                            archive.writestr(name, b"unexpected")
+                    with self.subTest(name=name), self.assertRaises(ValueError):
+                        bundle.check(root)
+
     def test_unsafe_runtime_paths_are_rejected_before_packaging(self) -> None:
         with tempfile.TemporaryDirectory() as work:
             root = Path(work)
@@ -283,6 +488,44 @@ class PackagingTests(unittest.TestCase):
 
 
 class DocumentationTests(unittest.TestCase):
+    def test_generation_preserves_project_content_and_detects_stale_docs(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work)
+            (root / "docs").mkdir()
+            modules = ROOT / "node_modules"
+            if not modules.exists():
+                modules = ROOT.parent / "node_modules"
+            (root / "node_modules").symlink_to(modules, target_is_directory=True)
+            metadata = {"uuid": "fixture@example.test", "shell-version": ["49", "50"]}
+            project = {"repository": "quickspot", "requirements": "Fixture <dependency>."}
+            (root / "metadata.json").write_text(json.dumps(metadata))
+            (root / "docs/project.json").write_text(json.dumps(project))
+            regions = "\n".join(
+                f"<!-- quick-template:{name}:start --><!-- quick-template:{name}:end -->"
+                for name in [*docs.SECTIONS, "badges"]
+            )
+            (root / "README.md").write_text("# Project prose\n" + regions)
+            (root / "docs/index.html").write_text(
+                "<!doctype html><main>Project prose\n" + regions + "</main>"
+            )
+            with patch.object(docs, "ROOT", root), patch("sys.stdout", new=io.StringIO()):
+                with patch.object(sys, "argv", ["docs.py"]):
+                    docs.main()
+                readme = (root / "README.md").read_text()
+                page = (root / "docs/index.html").read_text()
+                self.assertIn("# Project prose", readme)
+                self.assertIn("Fixture &lt;dependency&gt;.", page)
+                self.assertIn("<!--email_off-->fixture@example.test<!--/email_off-->", page)
+                self.assertIn("systemctl --user disable --now quickspot-soloist.service", readme)
+                self.assertIn("Security issues", readme)
+                with patch.object(sys, "argv", ["docs.py", "--check"]):
+                    docs.main()
+                    (root / "README.md").write_text(
+                        readme.replace("just test-docs", "stale command")
+                    )
+                    with self.assertRaisesRegex(SystemExit, "Stale generated docs"):
+                        docs.main()
+
     def test_install_restart_precedes_enable(self) -> None:
         sections = docs.blocks(
             {"uuid": "fixture@example.test", "shell-version": ["50"]},
@@ -306,6 +549,31 @@ class DocumentationTests(unittest.TestCase):
         region = "<!-- quick-template:install:start --><!-- quick-template:install:end -->"
         with self.assertRaises(ValueError):
             docs.replace_block(region * 2, "install", "generated")
+
+
+class CleanupTests(unittest.TestCase):
+    def test_cleanup_preserves_source_and_external_symlink_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work) / "repo"
+            root.mkdir()
+            outside = Path(work) / "outside"
+            outside.mkdir()
+            (outside / "private.txt").write_text("private fixture")
+            (root / "coverage").symlink_to(outside, target_is_directory=True)
+            (root / "test-results").mkdir()
+            (root / "test-results/output.json").write_text("generated")
+            (root / "schemas").mkdir()
+            (root / "schemas/gschemas.compiled").write_bytes(b"generated")
+            (root / "fixture.shell-extension.zip").write_bytes(b"generated")
+            (root / "source.js").write_text("source")
+            clean.main(root)
+            clean.main(root)
+            self.assertEqual((outside / "private.txt").read_text(), "private fixture")
+            self.assertEqual((root / "source.js").read_text(), "source")
+            self.assertFalse((root / "coverage").is_symlink())
+            self.assertFalse((root / "test-results").exists())
+            self.assertFalse((root / "schemas/gschemas.compiled").exists())
+            self.assertEqual(list(root.glob("*.shell-extension.zip")), [])
 
 
 if __name__ == "__main__":
