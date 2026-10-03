@@ -4,7 +4,6 @@ on:
     tags: ['v*']
 permissions:
   contents: read
-  actions: read # Inspect workflow runs and download their tested artifacts.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -13,6 +12,9 @@ jobs:
     name: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read # Inspect workflow runs and download their tested artifacts.
     outputs:
       run: ${{ steps.verify.outputs.run }}
     steps:
