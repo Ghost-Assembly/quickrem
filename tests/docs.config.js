@@ -10,6 +10,7 @@ export default {
     sections: [
         ['overview', 'Overview'],
         ['install', 'Install'],
+        ['uninstall', 'Uninstall'],
         ['profiles', 'Profiles'],
         ['directory', 'Where profiles live'],
         ['launching', 'Launching'],

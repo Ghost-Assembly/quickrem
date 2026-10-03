@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["runtimeFiles", "docsPort", "nativeTests"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "runtimeFiles": {
+      "type": "array",
+      "minItems": 4,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "docsPort": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+    "nativeTests": { "type": "boolean" }
+  }
+}

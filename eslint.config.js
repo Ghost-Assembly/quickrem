@@ -68,7 +68,7 @@ export default [
         // Tooling and tests: run on Node.
         files: ['tests/**/*.js', '*.config.js', 'eslint.config.js'],
         languageOptions: {
-            ecmaVersion: 2022,
+            ecmaVersion: 2025,
             sourceType: 'module',
             globals: globals.node,
         },
@@ -77,6 +77,15 @@ export default [
             // parameters they have no use for. Same convention as the
             // extension code above.
             'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+        },
+    },
+    {
+        // Native integration and GTK smoke tests run in GJS, outside Node.
+        files: ['tests/gnome-*.js', 'tests/prefs_smoke.js'],
+        languageOptions: {
+            ecmaVersion: 2022,
+            sourceType: 'module',
+            globals: gjsGlobals,
         },
     },
     {

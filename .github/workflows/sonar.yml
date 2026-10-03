@@ -1,53 +1,56 @@
 name: Sonar
-
 on:
-    push:
-        branches: [main]
-    pull_request:
-
+  workflow_call:
+    secrets:
+      SONAR_TOKEN:
+        required: true
+  workflow_dispatch:
+  schedule:
+    - cron: '37 5 * * 1'
 permissions:
-    contents: read
-
+  contents: read
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
-
+  group: sonar-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
 jobs:
-    sonar:
-        runs-on: ubuntu-latest
-        timeout-minutes: 15
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-              with:
-                  # Sonar uses git history for blame and new-code detection.
-                  fetch-depth: 0
-                  persist-credentials: false
-
-            - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
-
-            - run: npm ci
-
-            # Coverage is produced here rather than pulled from the CI workflow, so
-            # this job stays independent of cross-workflow artifact plumbing.
-            - run: just coverage
-
-            # A secret cannot be read from a job-level `if`, so the check has
-            # to happen in a step. Without it this workflow is permanently red
-            # on a repository whose Sonar project has not been created yet,
-            # which trains everyone to ignore a failing check — the one habit
-            # that makes every other check worthless.
-            - name: Check whether Sonar is configured
-              id: sonar
-              env:
-                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-              run: echo "configured=${SONAR_TOKEN:+true}" >> "$GITHUB_OUTPUT"
-
-            - if: steps.sonar.outputs.configured == 'true'
-              uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
-              env:
-                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-            - if: steps.sonar.outputs.configured != 'true'
-              run: |
-                  echo "::notice::Sonar is not configured for this repository."
-                  echo "::notice::Import it at sonarcloud.io and add SONAR_TOKEN to the repository secrets."
+  sonar:
+    name: sonar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: 2026.9.1
+      - name: Require Sonar configuration
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: test -n "$SONAR_TOKEN" || { echo '::error::SONAR_TOKEN is required; scan cannot be skipped'; exit 1; }
+      - run: npm ci --ignore-scripts
+      - name: Install native test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gjs gnome-shell libglib2.0-bin librsvg2-common gir1.2-soup-3.0 gir1.2-secret-1 dbus-daemon
+      - run: just coverage
+      - name: Analyze the checked pull request or main branch
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          REVIEW: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.ref_name }}
+          SOURCE_BRANCH: ${{ github.head_ref }}
+          TARGET_BRANCH: ${{ github.base_ref }}
+        run: |
+          revision="$(git rev-parse HEAD)"
+          project="Ghost-Assembly_$(jq -r .name package.json)"
+          if [ -n "$REVIEW" ]; then
+            test "$TARGET_BRANCH" = main || { echo '::error::Free-plan PR analysis must target main'; exit 1; }
+            sonar-scanner -Dsonar.projectKey="$project" -Dsonar.pullrequest.key="$REVIEW" -Dsonar.pullrequest.branch="$SOURCE_BRANCH" -Dsonar.pullrequest.base="$TARGET_BRANCH" -Dsonar.scm.revision="$revision" -Dsonar.qualitygate.wait=true
+            python3 scripts/sonar_gate.py --project "$project" --pull-request "$REVIEW" --revision "$revision"
+          else
+            test "$BRANCH" = main || { echo '::error::Dispatch main for overall-code analysis on the Free plan'; exit 1; }
+            sonar-scanner -Dsonar.projectKey="$project" -Dsonar.branch.name=main -Dsonar.scm.revision="$revision" -Dsonar.qualitygate.wait=true
+            python3 scripts/sonar_gate.py --project "$project" --branch main --revision "$revision"
+          fi

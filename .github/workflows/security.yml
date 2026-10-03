@@ -1,61 +1,44 @@
 name: Security
-
 on:
-    push:
-        branches: [main]
-    pull_request:
-    workflow_dispatch:
-    schedule:
-        # Weekly, so new advisories are caught without needing a code change.
-        - cron: '17 5 * * 1'
-
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * 1'
 permissions:
-    contents: read
-
+  contents: read
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
-
+  group: security-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
 jobs:
-    codeql:
-        name: CodeQL
-        runs-on: ubuntu-latest
-        timeout-minutes: 20
-        permissions:
-            contents: read
-            security-events: write
-            actions: read
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-              with:
-                  persist-credentials: false
-
-            - uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
-              with:
-                  languages: javascript-typescript
-                  queries: security-extended
-
-            - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
-
-    scanners:
-        name: Scanners
-        # ci.yml runs `just ci`, which already includes `just security`, on every
-        # push and pull request. Running it again here would scan the same tree
-        # twice. What this job adds is the weekly schedule: the same scanners
-        # against unchanged code, catching advisories published since the last
-        # commit.
-        if: github.event_name != 'push' && github.event_name != 'pull_request'
-        runs-on: ubuntu-latest
-        timeout-minutes: 15
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-              with:
-                  # gitleaks scans history; a shallow clone gives it one commit.
-                  fetch-depth: 0
-                  persist-credentials: false
-
-            - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
-
-            # Same recipe as `just security` locally: gitleaks, trivy, osv-scanner,
-            # actionlint and zizmor, all pinned by mise.toml.
-            - run: just security
+  codeql:
+    name: codeql
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write # Upload CodeQL findings to GitHub code scanning.
+      actions: read # Inspect workflow runs and download their tested artifacts.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          languages: javascript-typescript,python
+          queries: security-extended
+      - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+  scanners:
+    name: scanners
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: 2026.9.1
+      - run: npm ci --ignore-scripts
+      - run: just security

@@ -10,9 +10,9 @@
 # This needs a real gnome-shell and so runs locally only; GitHub's runners have
 # no GNOME 50.
 #
-# Recommended frame, NOT in template.list: everything outside the marked
-# per-repo block is the same in every extension; the block holds what only
-# this one checks. Keep the frame in step by hand.
+# Project-specific lifecycle checks, called through project.just.
+# Keep common lifecycle assertions consistent across the extensions;
+# the marked block holds this project's own behavior checks.
 
 set -euo pipefail
 
@@ -152,7 +152,6 @@ export G_MESSAGES_DEBUG=all
 
 gnome-shell --wayland --headless --virtual-monitor 3840x1600 >"$LOG" 2>&1 &
 SHELL_PID=$!
-# shellcheck disable=SC2317  # invoked via trap
 cleanup() {
     # Captured first: this trap's own last command would otherwise become the
     # script's exit status, which is how a run that printed PASS still exited 1.

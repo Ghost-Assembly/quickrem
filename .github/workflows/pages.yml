@@ -1,0 +1,25 @@
+name: Docs
+on:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read # Inspect workflow runs and download their tested artifacts.
+      pages: write # Publish the tested documentation artifact to Pages.
+      id-token: write # Authenticate the Pages deployment with GitHub OIDC.
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        id: deploy
+        with:
+          artifact_name: github-pages

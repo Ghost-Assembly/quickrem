@@ -352,7 +352,16 @@
         </div>
 
         <div class="docs">
-            <nav class="toc" aria-labelledby="toc-title">
+            <form class="toc-controls" aria-label="Table of contents visibility">
+                <label for="toc-toggle"
+                    ><input
+                        type="checkbox"
+                        id="toc-toggle"
+                        aria-controls="contents"
+                    />On this page</label
+                >
+            </form>
+            <nav id="contents" class="toc" aria-labelledby="toc-title">
                 <p class="toc-title" id="toc-title">On this page</p>
                 <ol>
                     <li>
@@ -362,43 +371,46 @@
                         <a href="#install"><span class="n">02</span>Install</a>
                     </li>
                     <li>
-                        <a href="#profiles"><span class="n">03</span>Profiles</a>
+                        <a href="#uninstall"><span class="n">03</span>Uninstall</a>
+                    </li>
+                    <li>
+                        <a href="#profiles"><span class="n">04</span>Profiles</a>
                     </li>
                     <li>
                         <a href="#directory"
-                            ><span class="n">04</span>Where profiles live</a
+                            ><span class="n">05</span>Where profiles live</a
                         >
                     </li>
                     <li>
-                        <a href="#launching"><span class="n">05</span>Launching</a>
+                        <a href="#launching"><span class="n">06</span>Launching</a>
                     </li>
                     <li>
-                        <a href="#preferences"><span class="n">06</span>Preferences</a>
+                        <a href="#preferences"><span class="n">07</span>Preferences</a>
                     </li>
                     <li>
-                        <a href="#security"><span class="n">07</span>Security</a>
+                        <a href="#security"><span class="n">08</span>Security</a>
                     </li>
                     <li>
                         <a href="#architecture"
-                            ><span class="n">08</span>Architecture</a
+                            ><span class="n">09</span>Architecture</a
                         >
                     </li>
                     <li>
-                        <a href="#testing"><span class="n">09</span>Testing</a>
+                        <a href="#testing"><span class="n">10</span>Testing</a>
                     </li>
                     <li>
-                        <a href="#packaging"><span class="n">10</span>Packaging</a>
+                        <a href="#packaging"><span class="n">11</span>Packaging</a>
                     </li>
                     <li>
                         <a href="#contributing"
-                            ><span class="n">11</span>Contributing</a
+                            ><span class="n">12</span>Contributing</a
                         >
                     </li>
                     <li>
-                        <a href="#releasing"><span class="n">12</span>Releasing</a>
+                        <a href="#releasing"><span class="n">13</span>Releasing</a>
                     </li>
                     <li>
-                        <a href="#development"><span class="n">13</span>Development</a>
+                        <a href="#development"><span class="n">14</span>Development</a>
                     </li>
                 </ol>
                 <ul class="toc-links">
@@ -466,76 +478,6 @@
             </nav>
 
             <main class="content" id="main">
-                <details class="toc-m">
-                    <summary>
-                        On this page
-                        <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                        >
-                            <path d="M6 9l6 6 6-6" />
-                        </svg>
-                    </summary>
-                    <ol>
-                        <li>
-                            <a href="#overview"><span class="n">01</span>Overview</a>
-                        </li>
-                        <li>
-                            <a href="#install"><span class="n">02</span>Install</a>
-                        </li>
-                        <li>
-                            <a href="#profiles"><span class="n">03</span>Profiles</a>
-                        </li>
-                        <li>
-                            <a href="#directory"
-                                ><span class="n">04</span>Where profiles live</a
-                            >
-                        </li>
-                        <li>
-                            <a href="#launching"><span class="n">05</span>Launching</a>
-                        </li>
-                        <li>
-                            <a href="#preferences"
-                                ><span class="n">06</span>Preferences</a
-                            >
-                        </li>
-                        <li>
-                            <a href="#security"><span class="n">07</span>Security</a>
-                        </li>
-                        <li>
-                            <a href="#architecture"
-                                ><span class="n">08</span>Architecture</a
-                            >
-                        </li>
-                        <li>
-                            <a href="#testing"><span class="n">09</span>Testing</a>
-                        </li>
-                        <li>
-                            <a href="#packaging"><span class="n">10</span>Packaging</a>
-                        </li>
-                        <li>
-                            <a href="#contributing"
-                                ><span class="n">11</span>Contributing</a
-                            >
-                        </li>
-                        <li>
-                            <a href="#releasing"><span class="n">12</span>Releasing</a>
-                        </li>
-                        <li>
-                            <a href="#development"
-                                ><span class="n">13</span>Development</a
-                            >
-                        </li>
-                    </ol>
-                </details>
-
                 <section class="section" id="overview" aria-labelledby="overview-title">
                     <p class="kicker">01</p>
                     <h2 id="overview-title">Overview</h2>
@@ -649,77 +591,77 @@
                 <section class="section" id="install" aria-labelledby="install-title">
                     <p class="kicker">02</p>
                     <h2 id="install-title">Install</h2>
-                    <h3>Requires</h3>
-                    <ul class="bullets">
-                        <li><span>GNOME Shell 49 or 50.</span></li>
-                        <li>
-                            <span
-                                >Remmina, as the Flatpak
-                                (<code>org.remmina.Remmina</code>) or a distribution
-                                package.</span
-                            >
-                        </li>
-                    </ul>
+                    <!-- quick-template:install:start -->
+                    <p>
+                        Requires GNOME Shell 49 or 50. Requires Remmina and its saved
+                        connection profiles.
+                    </p>
                     <h3>From a release</h3>
                     <p>
-                        No clone and no toolchain: <code>gnome-extensions</code> ships
-                        with GNOME Shell. Installing also compiles the settings schema.
+                        Download the latest release ZIP and install it for your user. xh
+                        is a download tool; you can also download the ZIP from GitHub in
+                        a browser. Installing compiles the settings schema.
                     </p>
                     <div class="code night">
-                        <header>
-                            <span>Shell</span
-                            ><span class="dots" aria-hidden="true"
-                                ><i></i><i></i><i></i
-                            ></span>
-                        </header>
-                        <pre
-                            tabindex="0"
-                        ><span class="p">$ </span><span class="k">curl</span> -LO https://github.com/Ghost-Assembly/quickrem/releases/latest/download/quickrem@napalm255.github.io.shell-extension.zip
-<span class="p">$ </span><span class="k">gnome-extensions</span> install --force quickrem@napalm255.github.io.shell-extension.zip
-<span class="c"># log out and back in, then</span>
-<span class="p">$ </span><span class="k">gnome-extensions</span> enable quickrem@napalm255.github.io</pre>
+                        <div class="code-label">Shell</div>
+                        <pre><code>xh --download GET https://github.com/Ghost-Assembly/quickrem/releases/latest/download/<!--email_off-->quickrem@napalm255.github.io<!--/email_off-->.shell-extension.zip
+gnome-extensions install --force <!--email_off-->quickrem@napalm255.github.io<!--/email_off-->.shell-extension.zip</code></pre>
+                    </div>
+                    <p>
+                        Log out and back in so GNOME discovers the extension, then
+                        enable it:
+                    </p>
+                    <div class="code night">
+                        <div class="code-label">Shell</div>
+                        <pre><code>gnome-extensions enable <!--email_off-->quickrem@napalm255.github.io<!--/email_off--></code></pre>
                     </div>
                     <h3>From a clone</h3>
+                    <p>
+                        Install mise and activate it in your shell. Clone the
+                        repository, install its pinned tools, and build and install the
+                        same ZIP used for releases:
+                    </p>
                     <div class="code night">
-                        <header>
-                            <span>Shell</span
-                            ><span class="dots" aria-hidden="true"
-                                ><i></i><i></i><i></i
-                            ></span>
-                        </header>
-                        <pre
-                            tabindex="0"
-                        ><span class="p">$ </span><span class="k">just</span> setup
-<span class="p">$ </span><span class="k">just</span> install
-<span class="p">$ </span><span class="k">just</span> enable</pre>
+                        <div class="code-label">Shell</div>
+                        <pre><code>git clone https://github.com/Ghost-Assembly/quickrem.git
+cd quickrem
+mise install
+mise exec -- just setup
+mise exec -- just install</code></pre>
                     </div>
-                    <div class="note">
-                        <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                        >
-                            <circle cx="12" cy="12" r="9" />
-                            <path d="M12 11v5" />
-                            <path d="M12 7.5h.01" />
-                        </svg>
-                        <p>
-                            <strong>Log out and back in.</strong> Wayland cannot reload
-                            the Shell in place, so a newly installed extension does not
-                            exist for the running Shell: the first
-                            <code>enable</code> after a fresh install says so. Enable it
-                            in the new session.
-                        </p>
+                    <p>
+                        Log out and back in, then run just enable. Run just prefs to
+                        open preferences. After updating a loaded extension, start a new
+                        session to load its new code; opening preferences does not
+                        reload GNOME Shell.
+                    </p>
+                    <!-- quick-template:install:end -->
+                </section>
+                <section
+                    class="section"
+                    id="uninstall"
+                    aria-labelledby="uninstall-title"
+                >
+                    <p class="kicker">03</p>
+                    <h2 id="uninstall-title">Uninstall</h2>
+                    <!-- quick-template:uninstall:start -->
+                    <p>
+                        Disable and uninstall the extension for your user. These
+                        commands preserve saved settings and other user data.
+                    </p>
+                    <div class="code night">
+                        <div class="code-label">Shell</div>
+                        <pre><code>gnome-extensions disable <!--email_off-->quickrem@napalm255.github.io<!--/email_off-->
+gnome-extensions uninstall <!--email_off-->quickrem@napalm255.github.io<!--/email_off--></code></pre>
                     </div>
+                    <p>
+                        From a clone, just uninstall performs the same steps. Disabling
+                        with just disable leaves the extension installed.
+                    </p>
+                    <!-- quick-template:uninstall:end -->
                 </section>
                 <section class="section" id="profiles" aria-labelledby="profiles-title">
-                    <p class="kicker">03</p>
+                    <p class="kicker">04</p>
                     <h2 id="profiles-title">Profiles</h2>
                     <p>
                         A Remmina profile is a <code>.remmina</code> file: a GKeyFile
@@ -802,7 +744,7 @@
                     id="directory"
                     aria-labelledby="directory-title"
                 >
-                    <p class="kicker">04</p>
+                    <p class="kicker">05</p>
                     <h2 id="directory-title">Where profiles live</h2>
                     <p>
                         The directory is found rather than configured. The first of
@@ -884,7 +826,7 @@
                     id="launching"
                     aria-labelledby="launching-title"
                 >
-                    <p class="kicker">05</p>
+                    <p class="kicker">06</p>
                     <h2 id="launching-title">Launching</h2>
                     <p>
                         Remmina has no D-Bus interface and is not D-Bus activatable, so
@@ -905,7 +847,7 @@
                                 ><i></i><i></i><i></i
                             ></span>
                         </header>
-                        <pre tabindex="0">
+                        <pre>
 Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
      org.remmina.Remmina -c @@u %U @@</pre>
                     </div>
@@ -931,7 +873,7 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                     id="preferences"
                     aria-labelledby="preferences-title"
                 >
-                    <p class="kicker">06</p>
+                    <p class="kicker">07</p>
                     <h2 id="preferences-title">Preferences</h2>
                     <p>
                         Open them from <em>Settings</em> at the bottom of the menu, from
@@ -976,7 +918,7 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                     </table>
                 </section>
                 <section class="section" id="security" aria-labelledby="security-title">
-                    <p class="kicker">07</p>
+                    <p class="kicker">08</p>
                     <h2 id="security-title">Security</h2>
                     <div class="note">
                         <svg
@@ -1058,7 +1000,7 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                     id="architecture"
                     aria-labelledby="architecture-title"
                 >
-                    <p class="kicker">08</p>
+                    <p class="kicker">09</p>
                     <h2 id="architecture-title">Architecture</h2>
                     <p>
                         The decisions live in modules that import nothing, so the suite
@@ -1246,50 +1188,39 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                     </p>
                 </section>
                 <section class="section" id="testing" aria-labelledby="testing-title">
-                    <p class="kicker">09</p>
+                    <p class="kicker">10</p>
                     <h2 id="testing-title">Testing</h2>
+                    <!-- quick-template:testing:start -->
                     <p>
-                        The unit suite runs on Node with Vitest. The pure modules run
-                        exactly as they ship. <code>modules/store.js</code> runs against
-                        an in-memory Gio in <code>tests/stubs/</code> — FIFOs, device
-                        nodes and symlinks included — with timeouts queued rather than
-                        scheduled, so “five events caused one rescan” is an assertion,
-                        not a sleep.
+                        just test runs the JavaScript suite with Vitest, the shared
+                        tooling tests, and any project-specific offline suites. just
+                        coverage reports runtime JavaScript and Python tooling coverage,
+                        including untested files. Test stubs and generated reports are
+                        not runtime source.
                     </p>
-                    <ul class="bullets">
-                        <li>
-                            <span
-                                ><code>modules/launch.js</code> is split out so its one
-                                security invariant is testable: a profile path is its
-                                own argument-vector element. A test fails if that stops
-                                being true.</span
-                            >
-                        </li>
-                        <li>
-                            <span
-                                ><code>prefs.js</code> is tested mostly for one trap: a
-                                translated string built while the module loads throws,
-                                and the preferences window then never opens,
-                                silently.</span
-                            >
-                        </li>
-                        <li>
-                            <span
-                                ><code>modules/panel.js</code> runs against stubs of St
-                                and the Shell’s menus that model what the Shell really
-                                does — it never destroys a quick toggle’s menu, and a
-                                menu measures its height before it announces it is
-                                opening.</span
-                            >
-                        </li>
-                    </ul>
                     <p>
-                        <code>just test-live</code> adds what CI cannot have: it boots a
-                        throwaway headless GNOME Shell in private XDG directories,
-                        enables, disables and re-enables the extension, adds and removes
-                        a profile while it runs, and fails on a JavaScript error or a
-                        lifetime warning. <code>just test-docs</code> checks this site
-                        in Chromium and Firefox.
+                        just test-docs runs Playwright and axe in Chromium and Firefox:
+                        dark and light accessibility checks, keyboard navigation, mobile
+                        layout, reduced motion, links, metadata, local assets, and no
+                        page JavaScript. Automated accessibility checks still require
+                        human review of reading and focus order.
+                    </p>
+                    <p>
+                        just test-live checks the package and runs isolated GNOME
+                        lifecycle checks. It is a separate local check, not proof of
+                        compatibility from a hosted runner. Verify each declared GNOME
+                        version and complete the project&#x27;s manual checks before
+                        releasing.
+                    </p>
+                    <!-- quick-template:testing:end -->
+                    <h3>Project checks</h3>
+                    <p>
+                        The offline suite verifies file-watcher coalescing, unsafe file
+                        types, argument-vector launching, preferences, and menu
+                        lifetimes. The isolated Shell check adds and removes profiles
+                        across enable/disable/re-enable. Use just fixtures 5 for
+                        throwaway profiles, then just fixtures-clean to remove them.
+                        Verify real Remmina launching manually.
                     </p>
                 </section>
                 <section
@@ -1297,25 +1228,37 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                     id="packaging"
                     aria-labelledby="packaging-title"
                 >
-                    <p class="kicker">10</p>
+                    <p class="kicker">11</p>
                     <h2 id="packaging-title">Packaging</h2>
+                    <!-- quick-template:packaging:start -->
+                    <div class="code night">
+                        <div class="code-label">Shell</div>
+                        <pre><code>just build
+just pack-check</code></pre>
+                    </div>
                     <p>
-                        <code>just build</code> makes the zip with plain
-                        <code>zip</code>, because <code>gnome-extensions</code> ships
-                        inside the gnome-shell package and CI has no GNOME. The cost is
-                        that nothing checks the archive layout, and extensions.gnome.org
-                        is strict about it. So <code>scripts/pack-check.sh</code>, part
-                        of <code>just test-live</code>, keeps the official packer as the
-                        authority: it diffs the two archives and checks that
-                        <code>metadata.json</code> sits at the root.
+                        The output is
+                        <!--email_off-->quickrem@napalm255.github.io<!--/email_off-->.shell-extension.zip
+                        at the repository root, with metadata.json at the archive root.
+                        Python&#x27;s standard library packages the explicit
+                        runtimeFiles allowlist in quick-project.json, using stable file
+                        order and timestamps.
                     </p>
+                    <p>
+                        just pack-check compares both filenames and file contents with
+                        GNOME&#x27;s official packer and validates shipped icons. Docs,
+                        tests, dependencies, credentials, downloaded binaries, and
+                        development artifacts stay outside the ZIP. Update the runtime
+                        allowlist when adding a runtime file.
+                    </p>
+                    <!-- quick-template:packaging:end -->
                 </section>
                 <section
                     class="section"
                     id="contributing"
                     aria-labelledby="contributing-title"
                 >
-                    <p class="kicker">11</p>
+                    <p class="kicker">12</p>
                     <h2 id="contributing-title">Contributing</h2>
                     <p>
                         <code>main</code> is protected: no direct pushes, no
@@ -1330,17 +1273,16 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                                 ><i></i><i></i><i></i
                             ></span>
                         </header>
-                        <pre
-                            tabindex="0"
-                        ><span class="p">$ </span><span class="k">git</span> switch -c type/short-description
+                        <pre><span class="p">$ </span><span class="k">git</span> switch -c type/short-description
 <span class="p">$ </span><span class="k">just</span> ci
 <span class="p">$ </span><span class="k">gh</span> pr create --fill
 <span class="p">$ </span><span class="k">gh</span> pr merge --squash --auto</pre>
                     </div>
                     <p>
-                        <code>ci</code> and <code>CodeQL</code> have to pass and the
-                        branch has to be current with <code>main</code>. No approving
-                        review is required, so a single maintainer is not locked out.
+                        The required <code>ci</code> check includes CodeQL and Sonar,
+                        and the branch has to be current with <code>main</code>. No
+                        approving review is required, so a single maintainer is not
+                        locked out.
                     </p>
                 </section>
                 <section
@@ -1348,69 +1290,76 @@ Exec=flatpak run --command=remmina-file-wrapper --file-forwarding \
                     id="releasing"
                     aria-labelledby="releasing-title"
                 >
-                    <p class="kicker">12</p>
+                    <p class="kicker">13</p>
                     <h2 id="releasing-title">Releasing</h2>
+                    <!-- quick-template:releasing:start -->
                     <p>
-                        Set the version in <code>metadata.json</code> and
-                        <code>package.json</code> and land that through a pull request.
-                        Then tag the merged commit and push the tag:
+                        Run just ci, just test-live, and the project manual checklist.
+                        Set metadata.json version-name and package.json version to the
+                        same new version. The GNOME Extensions website assigns the
+                        numeric metadata.json version during submission. Update the npm
+                        lockfile, regenerate the docs, and commit the reviewed changes
+                        to main through a passing pull request.
                     </p>
-                    <div class="code night">
-                        <header>
-                            <span>Shell</span
-                            ><span class="dots" aria-hidden="true"
-                                ><i></i><i></i><i></i
-                            ></span>
-                        </header>
-                        <pre
-                            tabindex="0"
-                        ><span class="p">$ </span><span class="k">git</span> switch main &amp;&amp; git pull
-<span class="p">$ </span><span class="k">git</span> tag -a v0.1.2 -m 'release v0.1.2'
-<span class="p">$ </span><span class="k">git</span> push origin v0.1.2</pre>
-                    </div>
                     <p>
-                        The release workflow checks the tag against both files before
-                        building anything — otherwise a release titled v0.1.2 could ship
-                        a zip that tells GNOME it is 0.1.0 — and runs the full suite
-                        before it publishes.
+                        Create and push a v-prefixed tag for that version. The release
+                        workflow verifies the version, main ancestry, and successful
+                        required checks for the tagged commit, then attaches its tested
+                        ZIP to a GitHub release. It does not upload to
+                        extensions.gnome.org; that submission and its review remain
+                        manual.
                     </p>
+                    <!-- quick-template:releasing:end -->
                 </section>
                 <section
                     class="section"
                     id="development"
                     aria-labelledby="development-title"
                 >
-                    <p class="kicker">13</p>
+                    <p class="kicker">14</p>
                     <h2 id="development-title">Development</h2>
+                    <!-- quick-template:development:start -->
+                    <p>
+                        mise.toml pins runtime and CLI versions; justfile owns commands;
+                        npm owns development dependencies and the lockfile. GNOME
+                        libraries come from the host. On image-based Fedora, use the
+                        host&#x27;s available tools or a toolbox/distrobox for missing
+                        system packages; do not layer packages onto the OS.
+                    </p>
                     <div class="code night">
-                        <header>
-                            <span>justfile</span
-                            ><span class="dots" aria-hidden="true"
-                                ><i></i><i></i><i></i
-                            ></span>
-                        </header>
-                        <pre
-                            tabindex="0"
-                        ><span class="k">just</span>             <span class="c"># list every recipe</span>
-<span class="k">just</span> test        <span class="c"># unit suite, on Node</span>
-<span class="k">just</span> test-docs   <span class="c"># this site, in Chromium and Firefox</span>
-<span class="k">just</span> lint        <span class="c"># eslint, prettier, gschema, shellcheck</span>
-<span class="k">just</span> security    <span class="c"># gitleaks, trivy, osv-scanner, actionlint, zizmor</span>
-<span class="k">just</span> ci          <span class="c"># what CI runs: lint, tests, test-docs, security, build</span>
-<span class="k">just</span> test-live   <span class="c"># headless gnome-shell, then the packer check</span>
-<span class="k">just</span> fixtures 5  <span class="c"># throwaway profiles for the menu and watcher</span>
-<span class="k">just</span> run         <span class="c"># a gnome-shell in a window (needs mutter-devkit)</span>
-<span class="k">just</span> logs        <span class="c"># follow the extension's output</span>
-<span class="k">just</span> docs        <span class="c"># serve this site on localhost:8000</span></pre>
+                        <div class="code-label">Shell</div>
+                        <pre><code>just setup        # install pinned tools, dependencies, and browsers
+just fmt          # format source and configuration
+just lint         # verify template, generated docs, source, and schemas
+just test         # JavaScript, Python, and project offline tests
+just coverage     # report JavaScript and Python coverage without source exclusions
+just test-docs    # Chromium and Firefox documentation checks
+just security     # dependencies, secrets, and workflow checks
+just build        # build the runtime-only extension ZIP
+just pack-check   # compare files and contents with GNOME&#x27;s packer
+just ci           # complete local verification and packaging
+just test-live    # isolated GNOME lifecycle and project integration checks
+just docs         # serve the static site at localhost:8000
+just template-check  # verify the pinned canonical template
+just template-status # report a newer approved template revision</code></pre>
                     </div>
                     <p>
-                        <code>mise.toml</code> installs the toolchain: Node is pinned to
-                        its major, the other tools track their latest release on
-                        purpose. <code>gjs</code>, <code>glib-compile-schemas</code>,
-                        <code>gnome-shell</code> and <code>gnome-extensions</code> come
-                        from the system, because they have to match the Shell you
-                        target.
+                        GitHub requires local verification, security analysis, and
+                        completed Sonar analysis. The shared Sonar policy requires zero
+                        security, reliability, and maintainability issues and zero
+                        duplicated lines. PR checks cover changed code; main checks
+                        cover the entire project. Missing configuration fails instead of
+                        silently skipping analysis. Pages publishes the tested docs only
+                        after the required checks pass on main.
                     </p>
+                    <p>
+                        Common tooling and these instructions are generated from a
+                        pinned canonical template. Change that source and synchronize
+                        its approved revision; do not edit generated sections or locally
+                        bless drift. Extension-specific behavior belongs in project
+                        configuration and project.just.
+                    </p>
+                    <!-- quick-template:development:end -->
                 </section>
             </main>
         </div>

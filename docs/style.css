@@ -663,8 +663,7 @@ svg {
     text-transform: uppercase;
 }
 
-.toc ol,
-.toc-m ol {
+.toc ol {
     margin: 0;
     padding: 0;
     list-style: none;
@@ -674,8 +673,7 @@ svg {
     border-inline-start: 1px solid var(--line);
 }
 
-.toc a,
-.toc-m a {
+.toc a {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -691,15 +689,13 @@ svg {
     border-inline-start: 2px solid transparent;
 }
 
-.toc a .n,
-.toc-m a .n {
+.toc a .n {
     min-width: 20px;
     font-family: var(--mono);
     font-size: 12px;
 }
 
-.toc a:hover,
-.toc-m a:hover {
+.toc a:hover {
     color: var(--ink);
     background: var(--raised);
 }
@@ -731,19 +727,18 @@ svg {
     color: var(--ink);
 }
 
-/* The phone's contents list; hidden until the breakpoint below. */
-.toc-m {
+/* One contents list serves both layouts; this native toggle is phone-only. */
+.toc-controls {
     display: none;
-    margin: 0 0 48px;
     border: 1px solid var(--line);
     border-radius: 12px;
     background: var(--raised);
 }
 
-.toc-m summary {
+.toc-controls label {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
     min-height: 52px;
     padding-inline: 16px;
     color: var(--mist);
@@ -751,21 +746,13 @@ svg {
     font-size: 13px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    list-style: none;
     cursor: pointer;
 }
 
-.toc-m summary::-webkit-details-marker {
-    display: none;
-}
-
-.toc-m[open] summary svg {
-    transform: rotate(180deg);
-}
-
-.toc-m ol {
-    padding: 6px 4px 10px;
-    border-block-start: 1px solid var(--line);
+.toc-controls input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--link);
 }
 
 .content {
@@ -922,7 +909,8 @@ svg {
     background: var(--sunken);
 }
 
-.code header {
+.code header,
+.code-label {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -951,7 +939,8 @@ svg {
 .code pre {
     margin: 0;
     padding: 18px 20px;
-    overflow-x: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     color: #dfe6ff;
     font-family: var(--mono);
     font-size: 14px;
@@ -1294,10 +1283,21 @@ svg {
 
     .toc {
         display: none;
+        position: static;
+        margin-block-end: 48px;
     }
 
-    .toc-m {
+    .toc-controls {
         display: block;
+        margin-block-end: 24px;
+    }
+
+    .toc-controls:has(input:checked) + .toc {
+        display: block;
+    }
+
+    .toc-title {
+        display: none;
     }
 
     .section + .section {

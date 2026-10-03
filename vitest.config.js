@@ -10,37 +10,18 @@ export default defineConfig({
         include: ['tests/**/*.test.js'],
         coverage: {
             provider: 'v8',
-            reporter: ['text', 'lcov'],
-            // Everything that holds a decision. modules/profiles.js,
-            // modules/paths.js and modules/keyfile.js import nothing and run
-            // as they ship; modules/store.js runs against the Gio stub below,
-            // which is what makes the debounce, the generation counters and
-            // the watch re-attach reachable from a unit test at all. prefs.js
-            // is here because it decides something too — which directory to
-            // report — and because a module-level gettext call there stops the
-            // preferences window opening at all, silently.
-            //
-            // modules/panel.js is here as well. It was once left to
-            // scripts/headless-check.sh on the grounds that stubs of the
-            // toolkit only test the stubs, and in that time it leaked its menu
-            // on every disable and animated the menu open to the wrong height
-            // — neither of which a log-watching smoke test can see. The stubs
-            // it runs against now model the two Shell behaviors it got wrong,
-            // and say so where they do.
-            //
-            // extension.js is left out: it only pairs construction with
-            // teardown, and the headless check enables, disables and
-            // re-enables it in a real gnome-shell. That matches
-            // sonar.coverage.exclusions in sonar-project.properties.
-            include: ['modules/**/*.js', 'prefs.js'],
-            // tests/stubs/* get pulled in through the aliases below, so they
-            // are named here; a stub's own coverage means nothing.
+            reporter: ['text', 'lcov', 'html'],
+            include: [
+                'modules/**/*.js',
+                'extension.js',
+                'prefs.js',
+                'scripts/soloist-runner.js',
+            ],
             exclude: ['tests/**'],
         },
     },
 
-    // gnome-shell resolves these at runtime; Node cannot. The stubs live in
-    // tests/, so they are never shipped and never counted as covered code.
+    // GNOME imports resolve to recording stubs for offline behavior tests.
     resolve: {
         alias: [
             { find: 'gi://Gio', replacement: stub('gi-gio') },

@@ -5,8 +5,8 @@ export class Extension {
     /**
      * @param {object} [metadata] Contents of metadata.json.
      */
-    constructor(metadata = { 'version-name': '0.0.0' }) {
-        this.metadata = metadata;
+    constructor(metadata) {
+        this.metadata = metadata ?? { 'version-name': '0.0.0' };
 
         // The real base class resolves and caches a Gio.Settings from the
         // gschema. Tests set `settings` on the instance instead, so

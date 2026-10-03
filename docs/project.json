@@ -1,0 +1,5 @@
+{
+  "$schema": "project.schema.json",
+  "repository": "quickrem",
+  "requirements": "Requires Remmina and its saved connection profiles."
+}
