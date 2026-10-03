@@ -205,7 +205,7 @@ just pack-check compares both filenames and file contents with GNOME's official 
 
 <!-- quick-template:releasing:start -->
 
-Run just ci, just test-live, and the project manual checklist. Set metadata.json version-name and package.json version to the same new version and increment metadata.json version for the GNOME Extension Store. Update the npm lockfile, regenerate the docs, and commit the reviewed changes to main through a passing pull request.
+Run just ci, just test-live, and the project manual checklist. Set metadata.json version-name and package.json version to the same new version. The GNOME Extensions website assigns the numeric metadata.json version during submission. Update the npm lockfile, regenerate the docs, and commit the reviewed changes to main through a passing pull request.
 
 Create and push a v-prefixed tag for that version. The release workflow verifies the version, main ancestry, and successful required checks for the tagged commit, then attaches its tested ZIP to a GitHub release. It does not upload to extensions.gnome.org; that submission and its review remain manual.
 <!-- quick-template:releasing:end -->

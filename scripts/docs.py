@@ -156,8 +156,9 @@ def blocks(metadata: dict, project: dict) -> dict[str, list[tuple[str, str]]]:
                 (
                     "Run just ci, just test-live, and the project manual checklist. Set "
                     "metadata.json version-name and package.json version to the same new "
-                    "version and increment metadata.json version for the GNOME Extension "
-                    "Store. Update the npm lockfile, regenerate the docs, and commit the "
+                    "version. The GNOME Extensions website assigns the numeric metadata.json "
+                    "version during submission. Update the npm lockfile, regenerate the docs, "
+                    "and commit the "
                     "reviewed changes to main through a passing pull request."
                 ),
             ),
