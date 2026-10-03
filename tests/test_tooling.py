@@ -133,6 +133,19 @@ class SonarTests(unittest.TestCase):
     def test_current_zero_results_pass(self) -> None:
         self.assertIsNone(gate.validate(self.measures(), "current", "current"))
 
+    def test_short_branch_results_cannot_approve_overall_code(self) -> None:
+        branches = [
+            {"name": "main", "type": "LONG"},
+            {"name": "branch-review-1", "type": "LONG"},
+            {"name": "review-1", "type": "SHORT"},
+        ]
+        for name in ["main", "branch-review-1"]:
+            with self.subTest(branch=name):
+                self.assertIsNone(gate.validate_branch(branches, name))
+        for name in ["review-1", "missing"]:
+            with self.subTest(branch=name), self.assertRaises(ValueError):
+                gate.validate_branch(branches, name)
+
     def test_every_quality_category_and_exact_duplication_are_required(self) -> None:
         for name in gate.METRICS:
             measures = self.measures()

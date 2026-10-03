@@ -38,7 +38,11 @@ jobs:
           BRANCH: ${{ github.ref_name }}
         run: |
           branch="$BRANCH"
-          if [ -n "$REVIEW" ]; then branch="review-$REVIEW"; fi
+          if [ -n "$REVIEW" ]; then
+            branch="branch-review-$REVIEW"
+          elif [ "$branch" != main ]; then
+            branch="branch-$branch"
+          fi
           revision="$(git rev-parse HEAD)"
           project="Ghost-Assembly_$(jq -r .name package.json)"
           sonar-scanner -Dsonar.projectKey="$project" -Dsonar.branch.name="$branch" -Dsonar.scm.revision="$revision" -Dsonar.qualitygate.wait=true

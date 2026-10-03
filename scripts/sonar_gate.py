@@ -40,6 +40,15 @@ def request(endpoint: str, parameters: dict[str, str]) -> dict:
         connection.close()
 
 
+def validate_branch(branches: list[dict], expected_name: str) -> None:
+    """Require overall-code analysis rather than new-code-only short branches."""
+    branch = next((item for item in branches if item.get("name") == expected_name), None)
+    if branch is None:
+        raise ValueError("No Sonar analysis exists for the checked branch")
+    if branch.get("type") != "LONG":
+        raise ValueError("Sonar must analyze overall code on a long-lived branch")
+
+
 def validate(measures: list[dict], analyzed_revision: str, expected_revision: str) -> None:
     """Reject stale, incomplete, or nonzero results, including rounded duplication."""
     if analyzed_revision != expected_revision:
@@ -60,6 +69,8 @@ def main() -> None:
     parser.add_argument("--revision", required=True)
     parser.add_argument("--branch", default="main")
     args = parser.parse_args()
+    branches = request("project_branches/list", {"project": args.project})["branches"]
+    validate_branch(branches, args.branch)
     analyses = request(
         "project_analyses/search", {"project": args.project, "branch": args.branch, "ps": "1"}
     )["analyses"]

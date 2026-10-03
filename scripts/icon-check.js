@@ -1,6 +1,6 @@
 // Assert that one icon file actually decodes.
 //
-// Run by scripts/pack-check.sh over everything in icons/. It exists because an
+// Run by just pack-check over everything in icons/. It exists because an
 // icon that fails to load is completely silent: gnome-shell draws nothing and
 // logs nothing, so the first report is a person saying "there is no icon".
 //
