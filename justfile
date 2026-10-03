@@ -58,9 +58,11 @@ test *args:
     python3 -m unittest discover -s tests -p 'test_*.py' -v
     just test-extra
 
-# Measure all JavaScript runtime source
+# Measure all JavaScript runtime source and Python tooling
 coverage:
     ./node_modules/.bin/vitest run --coverage
+    coverage run -m unittest discover -s tests -p 'test_*.py' -v
+    coverage xml -o coverage/python.xml
 
 # Test static documentation in Chromium and Firefox
 test-docs *args:

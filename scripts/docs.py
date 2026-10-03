@@ -191,6 +191,7 @@ def blocks(metadata: dict, project: dict) -> dict[str, list[tuple[str, str]]]:
                     "GitHub requires local verification, security analysis, and completed "
                     "Sonar analysis. The shared Sonar policy requires zero security, "
                     "reliability, and maintainability issues and zero duplicated lines. "
+                    "PR checks cover changed code; main checks cover the entire project. "
                     "Missing configuration fails instead of silently skipping analysis. Pages"
                     " publishes the tested docs only after the required checks pass on main."
                 ),

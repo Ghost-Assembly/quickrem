@@ -49,6 +49,16 @@ def validate_branch(branches: list[dict], expected_name: str) -> None:
         raise ValueError("Sonar must analyze overall code on a long-lived branch")
 
 
+def pull_request_revision(pull_requests: list[dict], key: str) -> str:
+    """Read the checked PR's analyzed revision, without logging account metadata."""
+    review = next((item for item in pull_requests if item.get("key") == key), None)
+    if review is None:
+        raise ValueError("No Sonar analysis exists for the checked pull request")
+    if review.get("base") != "main":
+        raise ValueError("Sonar pull request analysis must target main")
+    return review.get("commit", {}).get("sha", "")
+
+
 def validate(measures: list[dict], analyzed_revision: str, expected_revision: str) -> None:
     """Reject stale, incomplete, or nonzero results, including rounded duplication."""
     if analyzed_revision != expected_revision:
@@ -67,25 +77,34 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", required=True)
     parser.add_argument("--revision", required=True)
-    parser.add_argument("--branch", default="main")
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument("--branch", default="main")
+    scope.add_argument("--pull-request")
     args = parser.parse_args()
-    branches = request("project_branches/list", {"project": args.project})["branches"]
-    validate_branch(branches, args.branch)
-    analyses = request(
-        "project_analyses/search", {"project": args.project, "branch": args.branch, "ps": "1"}
-    )["analyses"]
-    if not analyses:
-        raise ValueError("No Sonar analysis exists for this branch")
+    if args.pull_request:
+        selection = {"pullRequest": args.pull_request}
+        reviews = request("project_pull_requests/list", {"project": args.project})["pullRequests"]
+        revision = pull_request_revision(reviews, args.pull_request)
+    else:
+        selection = {"branch": args.branch}
+        branches = request("project_branches/list", {"project": args.project})["branches"]
+        validate_branch(branches, args.branch)
+        analyses = request(
+            "project_analyses/search", {"project": args.project, **selection, "ps": "1"}
+        )["analyses"]
+        if not analyses:
+            raise ValueError("No Sonar analysis exists for this branch")
+        revision = analyses[0].get("revision", "")
     measures = request(
         "measures/component",
-        {"component": args.project, "branch": args.branch, "metricKeys": ",".join(METRICS)},
+        {"component": args.project, **selection, "metricKeys": ",".join(METRICS)},
     )["component"]["measures"]
-    validate(measures, analyses[0].get("revision", ""), args.revision)
+    validate(measures, revision, args.revision)
     dismissed = request(
         "issues/search",
         {
             "componentKeys": args.project,
-            "branch": args.branch,
+            **selection,
             "issueStatuses": "ACCEPTED,FALSE_POSITIVE",
             "ps": "1",
         },
@@ -93,7 +112,8 @@ def main() -> None:
     if dismissed["total"]:
         raise ValueError("Sonar findings were dismissed instead of fixed")
     print(
-        "PASS: current revision has zero security, reliability, maintainability, "
+        f"PASS: current {'PR changes' if args.pull_request else 'overall code'} "
+        "have zero security, reliability, maintainability, "
         "hotspots, and duplicated lines"
     )
 

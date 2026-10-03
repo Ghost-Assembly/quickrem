@@ -233,7 +233,7 @@ just template-check  # verify the pinned canonical template
 just template-status # report a newer approved template revision
 ```
 
-GitHub requires local verification, security analysis, and completed Sonar analysis. The shared Sonar policy requires zero security, reliability, and maintainability issues and zero duplicated lines. Missing configuration fails instead of silently skipping analysis. Pages publishes the tested docs only after the required checks pass on main.
+GitHub requires local verification, security analysis, and completed Sonar analysis. The shared Sonar policy requires zero security, reliability, and maintainability issues and zero duplicated lines. PR checks cover changed code; main checks cover the entire project. Missing configuration fails instead of silently skipping analysis. Pages publishes the tested docs only after the required checks pass on main.
 
 Common tooling and these instructions are generated from a pinned canonical template. Change that source and synchronize its approved revision; do not edit generated sections or locally bless drift. Extension-specific behavior belongs in project configuration and project.just.
 <!-- quick-template:development:end -->

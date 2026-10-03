@@ -4,3 +4,9 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "S", "SIM", "RUF"]
+
+[tool.coverage.run]
+branch = true
+relative_files = true
+source = ["scripts"]
+data_file = "coverage/.coverage"
