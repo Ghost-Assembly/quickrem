@@ -1,0 +1,21 @@
+{
+  "$schema": "quick-project.schema.json",
+  "runtimeFiles": [
+    "metadata.json",
+    "extension.js",
+    "prefs.js",
+    "LICENSE",
+    "modules/detect.js",
+    "modules/io.js",
+    "modules/keyfile.js",
+    "modules/launch.js",
+    "modules/panel.js",
+    "modules/paths.js",
+    "modules/profiles.js",
+    "modules/store.js",
+    "schemas/org.gnome.shell.extensions.quickrem.gschema.xml",
+    "icons/quickrem-symbolic.svg"
+  ],
+  "docsPort": 8323,
+  "nativeTests": false
+}

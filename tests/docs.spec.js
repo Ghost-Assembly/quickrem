@@ -10,17 +10,12 @@
 // tests/docs.config.js.
 
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 import config from './docs.config.js';
-
-const METADATA = fileURLToPath(new URL('../metadata.json', import.meta.url));
-// METADATA is a module-relative constant, not input of any kind.
-// eslint-disable-next-line security/detect-non-literal-fs-filename
-const metadata = JSON.parse(readFileSync(METADATA, 'utf8'));
+import metadata from '../metadata.json' with { type: 'json' };
 
 const { site, repo, title, sections } = config;
 
@@ -89,6 +84,21 @@ test('images and social metadata resolve', async ({ page, request }) => {
 // The page states facts about the project; these tie them to its own files so
 // a release cannot leave the docs behind.
 test.describe('agrees with metadata.json', () => {
+    test('protects bundle names from Cloudflare email obfuscation', async ({
+        page,
+    }) => {
+        await page.goto('/');
+        const names = page.locator('code').filter({
+            hasText: `${metadata.uuid}.shell-extension.zip`,
+        });
+        expect(await names.count()).toBeGreaterThan(0);
+        for (const name of await names.all()) {
+            const html = await name.innerHTML();
+            expect(html).toContain('<!--email_off-->');
+            expect(html).toContain('<!--/email_off-->');
+        }
+    });
+
     test('installs the real uuid', async ({ page }) => {
         await page.goto('/');
         const install = page.locator('#install');
@@ -127,6 +137,7 @@ test.describe('agrees with metadata.json', () => {
 if (config.drawing) {
     test('draws only what the extension shows', async ({ page }) => {
         await page.goto('/');
+        await expect(page.locator('figure.shot')).toBeVisible();
         await config.drawing(page.locator('figure.shot'), expect);
     });
 }
@@ -157,19 +168,13 @@ test('numbers the sections in the order the contents list gives', async ({ page 
 // docs.config.js opts out with `readmeLinks: false` while the README has none.
 if (config.readmeLinks !== false) {
     test('keeps the ids README.md links to', async ({ page }) => {
-        const README = fileURLToPath(new URL('../README.md', import.meta.url));
-        // README is a module-relative constant, not input of any kind.
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        const readme = readFileSync(README, 'utf8');
-        // The site's URL without its scheme, as a literal: a README may link
-        // with or without https://.
-        const host = site
-            .replace(/^https?:\/\//, '')
-            .replaceAll(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-        // Built from docs.config.js, a module-relative constant, not input.
-        // eslint-disable-next-line security/detect-non-literal-regexp
-        const pattern = new RegExp(`${host}#([\\w-]+)`, 'g');
-        const ids = [...readme.matchAll(pattern)].map(match => match[1]);
+        // Playwright runs from the repository root, as configured by just.
+        const readme = readFileSync('README.md', 'utf8');
+        const host = site.replace(/^https?:\/\//, '');
+        const ids = [...readme.matchAll(/\]\(([^)\s]+)\)/g)]
+            .map(match => match[1])
+            .filter(link => link.startsWith(site + '#') || link.startsWith(host + '#'))
+            .map(link => link.split('#')[1]);
         expect(ids.length).toBeGreaterThan(0);
 
         await page.goto('/');
@@ -200,23 +205,32 @@ test.describe('contents list', () => {
     test('is a sticky sidebar on a desktop', async ({ page }) => {
         await page.goto('/');
         await expect(page.locator('nav.toc')).toBeVisible();
-        await expect(page.locator('details.toc-m')).toBeHidden();
+        await expect(page.locator('.toc-controls')).toBeHidden();
+        await expect(page.locator('nav.toc')).toHaveCount(1);
 
         await page.locator(`#${sections.at(-1)[0]}`).scrollIntoViewIfNeeded();
         await expect(page.locator('nav.toc')).toBeInViewport();
     });
 
-    test('folds into a disclosure on a phone', async ({ page }) => {
+    test('expands the same contents list by keyboard on a phone', async ({ page }) => {
         await page.setViewportSize(phone);
         await page.goto('/');
         await expect(page.locator('nav.toc')).toBeHidden();
 
-        const details = page.locator('details.toc-m');
-        await expect(details).toBeVisible();
-        await expect(details.getByRole('link', { name: /Install/ })).toBeHidden();
-
-        await details.locator('summary').click();
-        await expect(details.getByRole('link', { name: /Install/ })).toBeVisible();
+        const toggle = page.getByRole('checkbox', { name: 'On this page' });
+        await expect(toggle).toBeVisible();
+        await expect(toggle).not.toBeChecked();
+        await toggle.focus();
+        await page.keyboard.press('Space');
+        await expect(toggle).toBeChecked();
+        await expect(
+            page.locator('nav.toc').getByRole('link', { name: /Install/ }),
+        ).toBeVisible();
+        await page.keyboard.press('Tab');
+        await expect(page.locator('nav.toc a').first()).toBeFocused();
+        await toggle.focus();
+        await page.keyboard.press('Space');
+        await expect(page.locator('nav.toc')).toBeHidden();
     });
 });
 

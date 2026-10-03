@@ -1,5 +1,21 @@
 # QuickRem
 
+<!-- quick-template:badges:start -->
+
+[![CI](https://github.com/Ghost-Assembly/quickrem/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ghost-Assembly/quickrem/actions/workflows/ci.yml)
+[![Security](https://github.com/Ghost-Assembly/quickrem/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Ghost-Assembly/quickrem/actions/workflows/security.yml)
+[![Docs](https://img.shields.io/website?url=https%3A%2F%2Fghost-assembly.com%2Fquickrem%2F&label=docs)](https://ghost-assembly.com/quickrem/)
+[![Release](https://img.shields.io/github/v/release/Ghost-Assembly/quickrem)](https://github.com/Ghost-Assembly/quickrem/releases/latest)
+[![License](https://img.shields.io/github/license/Ghost-Assembly/quickrem)](https://github.com/Ghost-Assembly/quickrem/blob/main/LICENSE)
+[![GNOME](https://img.shields.io/badge/GNOME-49%20%7C%2050-blue)](https://ghost-assembly.com/quickrem/#install)
+[![Security issues](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsonarcloud.io%2Fapi%2Fmeasures%2Fcomponent%3Fcomponent%3DGhost-Assembly_quickrem%26metricKeys%3Dsoftware_quality_security_issues&query=%24.component.measures%5B0%5D.value&label=Security+issues)](https://sonarcloud.io/dashboard?id=Ghost-Assembly_quickrem)
+[![Reliability issues](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsonarcloud.io%2Fapi%2Fmeasures%2Fcomponent%3Fcomponent%3DGhost-Assembly_quickrem%26metricKeys%3Dsoftware_quality_reliability_issues&query=%24.component.measures%5B0%5D.value&label=Reliability+issues)](https://sonarcloud.io/dashboard?id=Ghost-Assembly_quickrem)
+[![Maintainability issues](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsonarcloud.io%2Fapi%2Fmeasures%2Fcomponent%3Fcomponent%3DGhost-Assembly_quickrem%26metricKeys%3Dsoftware_quality_maintainability_issues&query=%24.component.measures%5B0%5D.value&label=Maintainability+issues)](https://sonarcloud.io/dashboard?id=Ghost-Assembly_quickrem)
+[![Duplication](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsonarcloud.io%2Fapi%2Fmeasures%2Fcomponent%3Fcomponent%3DGhost-Assembly_quickrem%26metricKeys%3Dduplicated_lines_density&query=%24.component.measures%5B0%5D.value&label=Duplication)](https://sonarcloud.io/dashboard?id=Ghost-Assembly_quickrem)
+[![Coverage](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsonarcloud.io%2Fapi%2Fmeasures%2Fcomponent%3Fcomponent%3DGhost-Assembly_quickrem%26metricKeys%3Dcoverage&query=%24.component.measures%5B0%5D.value&label=Coverage)](https://sonarcloud.io/dashboard?id=Ghost-Assembly_quickrem)
+[![Sonar policy](https://github.com/Ghost-Assembly/quickrem/actions/workflows/sonar.yml/badge.svg?branch=main)](https://sonarcloud.io/dashboard?id=Ghost-Assembly_quickrem)
+<!-- quick-template:badges:end -->
+
 Your saved Remmina connections in Quick Settings, following the profile folder as it
 changes.
 
@@ -35,33 +51,6 @@ It never reads Remmina's stored passwords. `password`, `ssh_passphrase` and the
 rest are encrypted with a key in `remmina.pref`, and `modules/profiles.js` drops
 them while parsing rather than filtering them later.
 
-## Install
-
-Needs GNOME Shell 49 or 50, and Remmina. From the latest release, with no clone and
-no toolchain — `gnome-extensions` ships with GNOME Shell itself:
-
-```bash
-curl -LO 'https://github.com/Ghost-Assembly/quickrem/releases/latest/download/quickrem@napalm255.github.io.shell-extension.zip'
-gnome-extensions install --force 'quickrem@napalm255.github.io.shell-extension.zip'
-# log out and back in, then
-gnome-extensions enable quickrem@napalm255.github.io
-```
-
-That unpacks the extension and compiles its settings schema, so there is no
-separate `glib-compile-schemas` step.
-
-From a clone:
-
-```bash
-just setup
-just install
-just enable
-```
-
-A newly installed extension is not visible to a running Shell on Wayland, which
-cannot reload the Shell in place: the first `enable` after a fresh install says
-the extension does not exist. Log out and back in, then it works.
-
 ## Preferences
 
 `just prefs`, or the Settings entry at the bottom of the menu. The first row
@@ -81,49 +70,6 @@ appended as a separate argument, never interpolated into the string. With it
 empty, opening a profile goes through the `application/x-remmina` handler and
 `Open Remmina…` goes through `org.remmina.Remmina.desktop` via
 `Shell.AppSystem`; a command set here is used for both instead.
-
-## Development
-
-```bash
-just              # list every recipe
-just test         # unit suite, runs on Node
-just test-docs    # the docs site, in Chromium and Firefox
-just lint         # eslint, prettier, gschema and shellcheck
-just ci           # everything CI runs
-just fixtures 5   # write throwaway profiles to exercise the menu and watcher
-just fixtures-clean
-just test-live    # headless Shell smoke test, then the packer check
-just logs         # follow the extension's output
-```
-
-`modules/profiles.js`, `modules/paths.js` and `modules/keyfile.js` import
-nothing but each other, so Vitest runs them on plain Node. `modules/store.js` is
-unit-tested against an in-memory Gio in `tests/stubs/` — FIFOs, device nodes and
-symlinks included — which is what makes the debounces, the generation guards
-and the watch re-attach reachable from a test.
-
-`modules/launch.js` exists so the launch path can be tested at all: `panel.js`
-imports St and QuickSettings, which a unit test cannot supply meaningfully, and
-the launch code carries this extension's one security invariant — a profile path
-is its own argument-vector element and is never interpolated into
-`launch-command`, so a profile named with a semicolon is an argument rather than
-a second command. A test fails if that stops being true.
-
-`prefs.js` is unit-tested too, mostly to pin one trap: `_()` may not be called
-while a module is being evaluated, and a translated string in a module-level
-table stops the preferences window opening at all — silently, because nothing
-else in the extension imports `prefs.js`.
-
-`modules/panel.js` is unit-tested against stubs of St and the Shell's menus.
-Those stubs model the Shell behaviors the panel has to work around — the Shell
-never destroys a quick toggle's menu, and a quick toggle's menu measures the
-height it animates to before it announces that it is opening — because a
-headless smoke test that only reads the log saw neither.
-
-`extension.js` only pairs construction with teardown. It is covered by
-`scripts/headless-check.sh`, which enables, disables and re-enables the real
-extension in a real headless gnome-shell and fails on a JavaScript error or a
-lifetime warning.
 
 ## Architecture
 
@@ -176,20 +122,121 @@ gh pr create --fill
 gh pr merge --squash --auto
 ```
 
-## Releasing
+## Install
 
-Set the version in `metadata.json` and `package.json` and land that through a
-pull request like anything else. Then tag the merged commit on `main` and push
-the tag — tags are not covered by branch protection:
+<!-- quick-template:install:start -->
 
-```bash
-git switch main && git pull
-git tag -a v0.1.2 -m 'release v0.1.2'
-git push origin v0.1.2
+Requires GNOME Shell 49 or 50. Requires Remmina and its saved connection profiles.
+
+### From a release
+
+Download the latest release ZIP and install it for your user. xh is a download tool; you can also download the ZIP from GitHub in a browser. Installing compiles the settings schema.
+
+```sh
+xh --download GET https://github.com/Ghost-Assembly/quickrem/releases/latest/download/quickrem@napalm255.github.io.shell-extension.zip
+gnome-extensions install --force quickrem@napalm255.github.io.shell-extension.zip
 ```
 
-CI checks the tag against both files before it builds anything, so a tag that
-disagrees with the tree fails instead of shipping a mislabeled zip.
+Log out and back in so GNOME discovers the extension, then enable it:
+
+```sh
+gnome-extensions enable quickrem@napalm255.github.io
+```
+
+### From a clone
+
+Install mise and activate it in your shell. Clone the repository, install its pinned tools, and build and install the same ZIP used for releases:
+
+```sh
+git clone https://github.com/Ghost-Assembly/quickrem.git
+cd quickrem
+mise install
+mise exec -- just setup
+mise exec -- just install
+```
+
+Log out and back in, then run just enable. Run just prefs to open preferences. After updating a loaded extension, start a new session to load its new code; opening preferences does not reload GNOME Shell.
+<!-- quick-template:install:end -->
+
+## Uninstall
+
+<!-- quick-template:uninstall:start -->
+
+Disable and uninstall the extension for your user. These commands preserve saved settings and other user data.
+
+```sh
+gnome-extensions disable quickrem@napalm255.github.io
+gnome-extensions uninstall quickrem@napalm255.github.io
+```
+
+From a clone, just uninstall performs the same steps. Disabling with just disable leaves the extension installed.
+<!-- quick-template:uninstall:end -->
+
+## Testing
+
+<!-- quick-template:testing:start -->
+
+just test runs the JavaScript suite with Vitest, the shared tooling tests, and any project-specific offline suites. just coverage reports the JavaScript coverage universe, including untested runtime files. Test stubs and generated reports are not runtime source.
+
+just test-docs runs Playwright and axe in Chromium and Firefox: dark and light accessibility checks, keyboard navigation, mobile layout, reduced motion, links, metadata, local assets, and no page JavaScript. Automated accessibility checks still require human review of reading and focus order.
+
+just test-live checks the package and runs isolated GNOME lifecycle checks. It is a separate local check, not proof of compatibility from a hosted runner. Verify each declared GNOME version and complete the project's manual checks before releasing.
+<!-- quick-template:testing:end -->
+
+### Project checks
+
+The offline suite verifies file-watcher coalescing, unsafe file types, argument-vector launching, preferences, and menu lifetimes. The isolated Shell check adds and removes profiles across enable/disable/re-enable. Use just fixtures 5 for throwaway profiles, then just fixtures-clean to remove them. Verify real Remmina launching manually.
+
+## Packaging
+
+<!-- quick-template:packaging:start -->
+
+```sh
+just build
+just pack-check
+```
+
+The output is quickrem@napalm255.github.io.shell-extension.zip at the repository root, with metadata.json at the archive root. Python's standard library packages the explicit runtimeFiles allowlist in quick-project.json, using stable file order and timestamps.
+
+just pack-check compares both filenames and file contents with GNOME's official packer and validates shipped icons. Docs, tests, dependencies, credentials, downloaded binaries, and development artifacts stay outside the ZIP. Update the runtime allowlist when adding a runtime file.
+<!-- quick-template:packaging:end -->
+
+## Releasing
+
+<!-- quick-template:releasing:start -->
+
+Run just ci, just test-live, and the project manual checklist. Set metadata.json version-name and package.json version to the same new version and increment metadata.json version for the GNOME Extension Store. Update the npm lockfile, regenerate the docs, and commit the reviewed changes to main through a passing pull request.
+
+Create and push a v-prefixed tag for that version. The release workflow verifies the version, main ancestry, and successful required checks for the tagged commit, then attaches its tested ZIP to a GitHub release. It does not upload to extensions.gnome.org; that submission and its review remain manual.
+<!-- quick-template:releasing:end -->
+
+## Development
+
+<!-- quick-template:development:start -->
+
+mise.toml pins runtime and CLI versions; justfile owns commands; npm owns development dependencies and the lockfile. GNOME libraries come from the host. On image-based Fedora, use the host's available tools or a toolbox/distrobox for missing system packages; do not layer packages onto the OS.
+
+```sh
+just setup        # install pinned tools, dependencies, and browsers
+just fmt          # format source and configuration
+just lint         # verify template, generated docs, source, and schemas
+just test         # JavaScript, Python, and project offline tests
+just coverage     # report JavaScript coverage without source exclusions
+just test-docs    # Chromium and Firefox documentation checks
+just security     # dependencies, secrets, and workflow checks
+just build        # build the runtime-only extension ZIP
+just pack-check   # compare files and contents with GNOME's packer
+just ci           # complete local verification and packaging
+just test-live    # isolated GNOME lifecycle and project integration checks
+just docs         # serve the static site at localhost:8000
+just template-check  # verify the pinned canonical template
+just template-status # report a newer approved template revision
+```
+
+GitHub requires local verification, security analysis, and completed Sonar analysis. The shared Sonar policy requires zero security, reliability, and maintainability issues and zero duplicated lines. Missing configuration fails instead of silently skipping analysis. Pages publishes the tested docs only after the required checks pass on main.
+
+Common tooling and these instructions are generated from a pinned canonical template. Change that source and synchronize its approved revision; do not edit generated sections or locally bless drift. Extension-specific behavior belongs in project configuration and project.just.
+<!-- quick-template:development:end -->
 
 ## License
 

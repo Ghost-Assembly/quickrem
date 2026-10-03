@@ -1,138 +1,133 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
-
-# This file is shared, byte for byte, by every Ghost Assembly GNOME Shell
-# extension (see template.list). Recipes only this project needs live in
-# project.just, imported at the end.
-
-# Derived, so metadata.json is the only place the uuid is written down. Read
-# with just's own functions rather than jq: every variable is evaluated before
-# any recipe runs, so a jq here would stop `just setup` from ever getting as far
-# as saying that jq is missing. The scripts still need jq, and setup checks it.
 _uuid := replace_regex(read("metadata.json"), '(?s)^.*?"uuid"\s*:\s*"([^"]+)".*$', '$1')
-uuid := if _uuid =~ '^[A-Za-z0-9._@-]+$' { _uuid } else { error("no uuid in metadata.json") }
-name := replace_regex(uuid, '@.*$', '')
-install_dir := env_var('HOME') / ".local/share/gnome-shell/extensions" / uuid
+uuid := if _uuid =~ '^[A-Za-z0-9._@-]+$' { _uuid } else { error("invalid extension UUID") }
+_name := replace_regex(read("package.json"), '(?s)^.*?"name"\s*:\s*"([^"]+)".*$', '$1')
+project_name := if _name =~ '^quick[a-z]+$' { _name } else { error("invalid project name") }
 
-# stylesheet.css ships only in the projects that have one.
-src := "metadata.json extension.js prefs.js modules schemas icons" + if path_exists("stylesheet.css") == "true" { " stylesheet.css" } else { "" }
-
-# List available recipes
+# List project commands
 default:
     @just --list
 
-# Install dependencies and dev tooling
+# Install the exact toolchain, dependencies, and browser engines
 setup:
     mise install
-    npm ci
-    npx playwright install chromium firefox
-    @for pair in gjs:gjs glib-compile-schemas:glib2 gnome-shell:gnome-shell \
-        gnome-extensions:gnome-shell rsync:rsync zip:zip unzip:unzip jq:jq; do \
-        tool="${pair%%:*}"; package="${pair#*:}"; \
-        command -v "$tool" >/dev/null \
-            || { echo "missing $tool — dnf install $package"; exit 1; }; \
-    done
-    @test -x /usr/libexec/mutter-devkit \
-        || echo "optional: just run needs mutter-devkit — dnf install mutter-devkit"
-    @echo "ready"
+    npm ci --ignore-scripts
+    ./node_modules/.bin/playwright install chromium firefox
+    @for tool in gjs glib-compile-schemas gnome-extensions jq; do command -v "$tool" >/dev/null || { echo "missing host tool: $tool; use a development container if needed" >&2; exit 1; }; done
 
-# Format code in place
+# Format source and generated documentation
 fmt:
-    npx prettier --write .
-    npx eslint --fix .
+    ./node_modules/.bin/prettier --write .
+    ./node_modules/.bin/eslint --fix .
+    ruff format scripts tests
+    ruff check --fix scripts tests
+    python3 scripts/docs.py
 
-# Static analysis; changes nothing
-lint: template-check
-    npx eslint .
-    npx prettier --check .
-    glib-compile-schemas --strict --dry-run schemas
-    shellcheck scripts/*.sh
+# Verify canonical files, documentation, source, and schemas
+lint: template-check docs-check
+    ./node_modules/.bin/eslint --max-warnings=0 --no-inline-config .
+    ./node_modules/.bin/prettier --check .
+    ruff check --ignore-noqa scripts tests
+    ruff format --check scripts tests
+    /usr/bin/glib-compile-schemas --strict --dry-run schemas
+    @if compgen -G 'scripts/*.sh' >/dev/null; then shellcheck scripts/*.sh; fi
 
-# Check the files shared across the extensions against template.sha256; --write regenerates it
-template-check *args:
-    ./scripts/template-check.sh {{ args }}
+# Verify against the immutable canonical template
+template-check:
+    python3 scripts/template.py check
 
-# Run the unit suite
+# Adopt a reviewed canonical revision
+template-sync $revision:
+    python3 scripts/template.py sync "$revision"
+
+# Report newer approved template revisions
+template-status:
+    python3 scripts/template.py status
+
+# Regenerate shared instructions and README badges
+docs-generate:
+    python3 scripts/docs.py
+
+# Fail on stale generated documentation
+docs-check:
+    python3 scripts/docs.py --check
+
+# Run offline behavior tests and shared tooling regressions
 test *args:
-    npx vitest run {{ args }}
+    ./node_modules/.bin/vitest run {{args}}
+    python3 -m unittest discover -s tests -p 'test_*.py' -v
+    just test-extra
 
-# The docs site in Chromium and Firefox: accessibility, layout, no JavaScript
-test-docs *args:
-    npx playwright test {{ args }}
-
-# Unit suite with a coverage report
+# Measure all JavaScript runtime source
 coverage:
-    npx vitest run --coverage
+    ./node_modules/.bin/vitest run --coverage
 
-# None of it runs in CI: it needs a real Shell, and whatever live-extra in
-# project.just probes. Builds first, so pack-check never compares a stale zip.
-# Smoke-test in a headless gnome-shell, check the bundle, run any live-extra
-test-live: build
-    ./scripts/headless-check.sh
-    ./scripts/pack-check.sh
-    @if {{ just_executable() }} --justfile {{ justfile() }} --summary | tr ' ' '\n' | grep -qx live-extra; then \
-        {{ just_executable() }} --justfile {{ justfile() }} live-extra; \
-    fi
+# Test static documentation in Chromium and Firefox
+test-docs *args:
+    ./node_modules/.bin/playwright test {{args}}
 
-# Compare the built zip against what gnome-extensions pack produces
-pack-check: build
-    ./scripts/pack-check.sh
-
-# Serve the documentation site locally
-docs:
-    @echo "http://localhost:8000"
-    python3 -m http.server 8000 --directory docs
-
-# Full local security scan
+# Check dependencies, working files, Git history, and workflow security
 security:
     osv-scanner scan source --lockfile=package-lock.json
-    gitleaks detect --no-banner --redact
-    trivy fs --scanners vuln,secret,misconfig --exit-code 1 .
-    actionlint
-    zizmor .github/workflows/
+    python3 scripts/security_source.py
+    gitleaks git --redact --no-banner .
+    python3 scripts/workflow_lint.py
+    zizmor --offline --persona auditor --no-ignores .github/workflows/
 
-# `ci` runs lint before this; a standalone `just build` deliberately does not,
-# so it stays quick to iterate with.
-# Produce the installable zip
+# Build an explicit runtime-only ZIP
 build:
-    rm -f {{ uuid }}.shell-extension.zip
-    zip -qr {{ uuid }}.shell-extension.zip {{ src }} -x 'schemas/gschemas.compiled'
-    @echo "built {{ uuid }}.shell-extension.zip"
+    python3 scripts/build.py
 
-# GNOME 49 and later have no nested mode: --devkit opens the Shell in a
-# window through mutter-devkit (dnf install mutter-devkit).
-# Run a gnome-shell in a window to try the extension by hand
+# Compare every runtime file with GNOME's official packer
+pack-check: build
+    python3 scripts/build.py --check
+    @for icon in icons/*.svg; do [[ ! -f "$icon" ]] || /usr/bin/gjs -m scripts/icon-check.js "$icon"; done
+
+# Perform isolated lifecycle and project integration checks
+test-live: pack-check
+    just live-check
+    just live-extra
+
+# Run GNOME in a development window
 run:
-    dbus-run-session -- gnome-shell --devkit --wayland
+    /usr/bin/dbus-run-session -- /usr/bin/gnome-shell --devkit --wayland
 
-# Copy the extension into the user extensions directory
-install:
-    mkdir -p {{ install_dir }}
-    rsync -a --delete --exclude '.git' {{ src }} {{ install_dir }}/
-    glib-compile-schemas {{ install_dir }}/schemas
+# Install the same ZIP used for releases
+install: build
+    /usr/bin/gnome-extensions install --force '{{uuid}}.shell-extension.zip'
 
-# Enable the extension
+# Enable the installed extension
 enable:
-    gnome-extensions enable {{ uuid }}
+    /usr/bin/gnome-extensions enable '{{uuid}}'
 
-# Disable the extension
+# Disable the installed extension
 disable:
-    gnome-extensions disable {{ uuid }}
+    /usr/bin/gnome-extensions disable '{{uuid}}'
 
-# Open the preferences window
+# Remove the extension while preserving user data
+uninstall:
+    just uninstall-extra
+    /usr/bin/gnome-extensions disable '{{uuid}}'
+    /usr/bin/gnome-extensions uninstall '{{uuid}}'
+
+# Open preferences
 prefs:
-    gnome-extensions prefs {{ uuid }}
+    /usr/bin/gnome-extensions prefs '{{uuid}}'
 
-# Follow the extension's log output
+# Follow GNOME Shell logs
 logs:
-    journalctl -f -o cat /usr/bin/gnome-shell | grep -i --line-buffered "{{ name }}"
+    journalctl --user -f -o cat /usr/bin/gnome-shell --grep '\[{{project_name}}\]'
 
-# Remove build output
-[confirm("remove node_modules, coverage, test output, the zip and compiled schemas?")]
+# Serve the static documentation site
+docs:
+    python3 -m http.server 8000 --bind 127.0.0.1 --directory docs
+
+# Remove generated output only
+[confirm("Remove generated test and build output?")]
 clean:
-    rm -rf node_modules coverage test-results playwright-report
-    rm -f {{ uuid }}.shell-extension.zip schemas/gschemas.compiled
+    python3 scripts/clean.py
 
-# Everything CI runs, in order
-ci: lint test test-docs security build
+# Run all local checks; GitHub additionally requires CodeQL and Sonar
+ci: lint test coverage test-docs security pack-check
 
-import? 'project.just'
+import 'project.just'

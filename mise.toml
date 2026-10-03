@@ -1,20 +1,17 @@
-# Toolchain versions only. Commands live in the justfile.
-#
-# gjs, glib-compile-schemas and gnome-shell are deliberately absent: they are
-# system packages tied to the running Shell and must match it, so mise must not
-# shadow them. `just setup` verifies they exist instead.
+# Exact tool versions shared by every Quick extension.
 [tools]
-# Node's major is pinned so a new LTS line is a deliberate change; the other
-# tools track "latest" and are listed here so a laptop and a runner install the
-# same set.
-node = "24"
-just = "latest"
+node = "24.21.0"
+python = "3.14.7"
+just = "1.58.0"
+ruff = "0.16.9"
+actionlint = "1.7.12"
+gitleaks = "8.30.1"
+osv-scanner = "2.6.0"
+shellcheck = "0.11.0"
+trivy = "0.74.0"
+zizmor = "1.30.1"
+gh = "2.99.0"
+sonar-scanner-cli = "8.1.0.6389"
 
-# Security and lint tooling. Scanners track "latest" on purpose — pinning a
-# scanner also pins its vulnerability data, which defeats the point of running it.
-actionlint = "latest"
-gitleaks = "latest"
-osv-scanner = "latest"
-shellcheck = "latest"
-trivy = "latest"
-zizmor = "latest"
+[env]
+UV_NO_MANAGED_PYTHON = "1"
