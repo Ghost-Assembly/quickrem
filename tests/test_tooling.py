@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -574,6 +575,71 @@ class CleanupTests(unittest.TestCase):
             self.assertFalse((root / "test-results").exists())
             self.assertFalse((root / "schemas/gschemas.compiled").exists())
             self.assertEqual(list(root.glob("*.shell-extension.zip")), [])
+
+
+class NativeToolsTests(unittest.TestCase):
+    def install(self, codes: list[int]) -> tuple[subprocess.CompletedProcess, list[str], Path]:
+        """Run the real installer with a sudo stand-in that replays apt exit codes."""
+        work = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (work / "bin").mkdir()
+        (work / "codes").write_text("".join(f"{code}\n" for code in codes))
+        sudo = work / "bin/sudo"
+        sudo.write_text(
+            "#!/usr/bin/env bash\n"
+            'printf "%s\\n" "$*" >> "$WORK/log"\n'
+            'if [ "$1" = sed ]; then exec "$@"; fi\n'
+            'code="$(head -n1 "$WORK/codes")"; sed -i 1d "$WORK/codes"; exit "${code:-0}"\n'
+        )
+        sudo.chmod(0o755)
+        (work / "log").touch()
+        shutil.copyfile(ROOT / "scripts/native_tools.sh", work / "native_tools.sh")
+        (work / "apt/sources.list.d").mkdir(parents=True)
+        (work / "apt/sources.list.d/ubuntu.sources").write_text(
+            "URIs: http://azure.archive.ubuntu.com/ubuntu/\n"
+        )
+        (work / "apt/sources.list.d/other.sources").write_text("URIs: https://example.invalid/\n")
+        result = subprocess.run(
+            ["/usr/bin/env", "bash", "native_tools.sh", "apt"],
+            cwd=work,
+            env={**os.environ, "PATH": f"{work / 'bin'}:{os.environ['PATH']}", "WORK": str(work)},
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        return result, (work / "log").read_text().splitlines(), work / "apt/sources.list.d"
+
+    def test_healthy_mirror_downloads_once_and_installs_offline(self) -> None:
+        result, log, sources = self.install([])
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual([line.split()[0] for line in log], ["timeout", "timeout", "apt-get"])
+        self.assertIn("--download-only", log[1])
+        self.assertNotIn("--download-only", log[2])
+        self.assertIn("azure.archive", (sources / "ubuntu.sources").read_text())
+
+    def test_stalled_mirror_switches_only_matching_sources_and_retries(self) -> None:
+        result, log, sources = self.install([124])
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("::warning::apt attempt 1", result.stdout)
+        self.assertEqual(
+            (sources / "ubuntu.sources").read_text(), "URIs: http://archive.ubuntu.com/ubuntu/\n"
+        )
+        self.assertEqual(
+            (sources / "other.sources").read_text(), "URIs: https://example.invalid/\n"
+        )
+        self.assertEqual(sum(line.startswith("sed ") for line in log), 1)
+        self.assertTrue(log[-1].startswith("apt-get ") and log[-1].endswith("dbus-daemon"))
+
+    def test_exhausted_downloads_never_reach_dpkg(self) -> None:
+        result, log, _ = self.install([0, 1] * 3)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("did not download in 3 attempts", result.stdout)
+        self.assertTrue(all(line.startswith(("timeout ", "sed ")) for line in log))
+
+    def test_failed_install_is_reported(self) -> None:
+        result, log, _ = self.install([0, 0, 100])
+        self.assertEqual(result.returncode, 100)
+        self.assertEqual(len(log), 3)
 
 
 if __name__ == "__main__":

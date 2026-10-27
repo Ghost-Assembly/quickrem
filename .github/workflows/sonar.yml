@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
         with:
           version: 2026.10.1
       - name: Require Sonar configuration
@@ -31,9 +31,7 @@ jobs:
         run: test -n "$SONAR_TOKEN" || { echo '::error::SONAR_TOKEN is required; scan cannot be skipped'; exit 1; }
       - run: npm ci --ignore-scripts
       - name: Install native test tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gjs gnome-shell libglib2.0-bin librsvg2-common gir1.2-soup-3.0 gir1.2-secret-1 dbus-daemon
+        run: bash scripts/native_tools.sh
       - run: just coverage
       - name: Analyze the checked pull request or main branch
         env:
