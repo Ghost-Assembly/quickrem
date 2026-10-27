@@ -594,8 +594,15 @@ class NativeToolsTests(unittest.TestCase):
         (work / "log").touch()
         shutil.copyfile(ROOT / "scripts/native_tools.sh", work / "native_tools.sh")
         (work / "apt/sources.list.d").mkdir(parents=True)
+        (work / "apt/apt-mirrors.txt").write_text(
+            "http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\n"
+            "https://archive.ubuntu.com/ubuntu/\tpriority:2\n"
+        )
+        (work / "apt/sources.list").write_text(
+            "deb http://azure.archive.ubuntu.com/ubuntu noble main\n"
+        )
         (work / "apt/sources.list.d/ubuntu.sources").write_text(
-            "URIs: http://azure.archive.ubuntu.com/ubuntu/\n"
+            "URIs: mirror+file:/etc/apt/apt-mirrors.txt\n"
         )
         (work / "apt/sources.list.d/other.sources").write_text("URIs: https://example.invalid/\n")
         result = subprocess.run(
@@ -607,26 +614,29 @@ class NativeToolsTests(unittest.TestCase):
             check=False,
             timeout=30,
         )
-        return result, (work / "log").read_text().splitlines(), work / "apt/sources.list.d"
+        return result, (work / "log").read_text().splitlines(), work / "apt"
 
     def test_healthy_mirror_downloads_once_and_installs_offline(self) -> None:
-        result, log, sources = self.install([])
+        result, log, apt = self.install([])
         self.assertEqual(result.returncode, 0)
         self.assertEqual([line.split()[0] for line in log], ["timeout", "timeout", "apt-get"])
         self.assertIn("--download-only", log[1])
         self.assertNotIn("--download-only", log[2])
-        self.assertIn("azure.archive", (sources / "ubuntu.sources").read_text())
+        self.assertIn("azure.archive", (apt / "apt-mirrors.txt").read_text())
 
     def test_stalled_mirror_switches_only_matching_sources_and_retries(self) -> None:
-        result, log, sources = self.install([124])
+        result, log, apt = self.install([124])
         self.assertEqual(result.returncode, 0)
         self.assertIn("::warning::apt attempt 1", result.stdout)
+        self.assertNotIn("azure", (apt / "apt-mirrors.txt").read_text())
         self.assertEqual(
-            (sources / "ubuntu.sources").read_text(), "URIs: http://archive.ubuntu.com/ubuntu/\n"
+            (apt / "sources.list").read_text(), "deb http://archive.ubuntu.com/ubuntu noble main\n"
         )
-        self.assertEqual(
-            (sources / "other.sources").read_text(), "URIs: https://example.invalid/\n"
-        )
+        for name, contents in [
+            ("ubuntu.sources", "URIs: mirror+file:/etc/apt/apt-mirrors.txt\n"),
+            ("other.sources", "URIs: https://example.invalid/\n"),
+        ]:
+            self.assertEqual((apt / "sources.list.d" / name).read_text(), contents)
         self.assertEqual(sum(line.startswith("sed ") for line in log), 1)
         self.assertTrue(log[-1].startswith("apt-get ") and log[-1].endswith("dbus-daemon"))
 
