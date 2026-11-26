@@ -13,7 +13,7 @@ test-extra:
     @true
 
 # Isolated GNOME lifecycle test
-live-check:
+live-check: build
     bash scripts/headless-check.sh
 
 # Additional integration checks

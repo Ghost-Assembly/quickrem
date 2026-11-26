@@ -3,6 +3,8 @@
 
 import argparse
 import json
+import posixpath
+import re
 import shutil
 import subprocess
 import tempfile
@@ -10,6 +12,8 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parent.parent
+# Static, side-effect, re-export and dynamic imports of a relative module path.
+RELATIVE_IMPORT = re.compile(r"""\b(?:from|import)\s*(?:\(\s*)?(['"])(\.\.?/[^'"]+)\1""")
 
 
 def runtime_files(root: Path) -> list[str]:
@@ -36,7 +40,24 @@ def runtime_files(root: Path) -> list[str]:
             raise ValueError("Runtime manifest contains a missing or unsupported file")
     if not {"metadata.json", "extension.js", "prefs.js", "LICENSE"}.issubset(names):
         raise ValueError("Runtime manifest is missing required extension files")
+    missing = undeclared_imports(root, names)
+    if missing:
+        raise ValueError("Runtime files import undeclared modules: " + ", ".join(missing))
     return names
+
+
+def undeclared_imports(root: Path, names: list[str]) -> list[str]:
+    """List relative imports that the package would not contain."""
+    declared = set(names)
+    missing = []
+    for name in names:
+        if not name.endswith(".js"):
+            continue
+        for _, specifier in RELATIVE_IMPORT.findall((root / name).read_text(encoding="utf-8")):
+            target = posixpath.normpath(posixpath.join(posixpath.dirname(name), specifier))
+            if target not in declared:
+                missing.append(f"{name} -> {specifier}")
+    return missing
 
 
 def artifact_name(root: Path) -> str:
