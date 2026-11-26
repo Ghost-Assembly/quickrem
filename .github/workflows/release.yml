@@ -22,9 +22,9 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+      - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
-          version: 2026.10.1
+          version: 2026.11.14
           cache: false
       - name: Verify tag and tested commit
         id: verify
@@ -50,9 +50,9 @@ jobs:
       contents: write # Create the release and attach its tested ZIP.
       actions: read # Inspect workflow runs and download their tested artifacts.
     steps:
-      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+      - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
-          version: 2026.10.1
+          version: 2026.11.14
           cache: false
           mise_toml: |
             [tools]
