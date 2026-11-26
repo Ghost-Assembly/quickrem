@@ -4,7 +4,7 @@
 
 The most recent release is supported. QuickRem runs inside the GNOME Shell
 process, so it is only ever supported on the Shell versions named in
-`metadata.json`: GNOME Shell 49 and 50.
+`metadata.json`: GNOME Shell 50 and 51.
 
 ## Reporting a vulnerability
 

@@ -7,7 +7,7 @@
 [![Docs](https://img.shields.io/website?url=https%3A%2F%2Fghost-assembly.com%2Fquickrem%2F&label=docs)](https://ghost-assembly.com/quickrem/)
 [![Release](https://img.shields.io/github/v/release/Ghost-Assembly/quickrem)](https://github.com/Ghost-Assembly/quickrem/releases/latest)
 [![License](https://img.shields.io/github/license/Ghost-Assembly/quickrem)](https://github.com/Ghost-Assembly/quickrem/blob/main/LICENSE)
-[![GNOME](https://img.shields.io/badge/GNOME-49%20%7C%2050-blue)](https://ghost-assembly.com/quickrem/#install)
+[![GNOME](https://img.shields.io/badge/GNOME-50%20%7C%2051-blue)](https://ghost-assembly.com/quickrem/#install)
 [![Security issues](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsonarcloud.io%2Fapi%2Fmeasures%2Fcomponent%3Fcomponent%3DGhost-Assembly_quickrem%26metricKeys%3Dsoftware_quality_security_issues&query=%24.component.measures%5B0%5D.value&label=Security+issues)](https://sonarcloud.io/dashboard?id=Ghost-Assembly_quickrem)
 [![Reliability issues](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsonarcloud.io%2Fapi%2Fmeasures%2Fcomponent%3Fcomponent%3DGhost-Assembly_quickrem%26metricKeys%3Dsoftware_quality_reliability_issues&query=%24.component.measures%5B0%5D.value&label=Reliability+issues)](https://sonarcloud.io/dashboard?id=Ghost-Assembly_quickrem)
 [![Maintainability issues](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsonarcloud.io%2Fapi%2Fmeasures%2Fcomponent%3Fcomponent%3DGhost-Assembly_quickrem%26metricKeys%3Dsoftware_quality_maintainability_issues&query=%24.component.measures%5B0%5D.value&label=Maintainability+issues)](https://sonarcloud.io/dashboard?id=Ghost-Assembly_quickrem)
@@ -126,7 +126,7 @@ gh pr merge --squash --auto
 
 <!-- quick-template:install:start -->
 
-Requires GNOME Shell 49 or 50. Requires Remmina and its saved connection profiles.
+Requires GNOME Shell 50 or 51. Requires Remmina and its saved connection profiles.
 
 ### From a release
 
