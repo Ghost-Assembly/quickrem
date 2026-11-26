@@ -472,6 +472,40 @@ class PackagingTests(unittest.TestCase):
                     with self.subTest(name=name), self.assertRaises(ValueError):
                         bundle.check(root)
 
+    def test_undeclared_relative_imports_are_rejected_before_packaging(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work)
+            files = {
+                "metadata.json": "{}",
+                "extension.js": "import { Model } from './modules/model.js';",
+                "prefs.js": "export default class {}",
+                "LICENSE": "fixture license",
+                "modules/model.js": "import Gio from 'gi://Gio';",
+            }
+            for name, content in files.items():
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content)
+            manifest = root / "quick-project.json"
+            manifest.write_text(json.dumps({"runtimeFiles": list(files)}))
+            self.assertEqual(bundle.runtime_files(root), list(files))
+            for statement in [
+                "import { panel } from './panel.js';",
+                'export * from "../modules/panel.js";',
+                "import './panel.js';",
+                "const panel = await import('./panel.js');",
+            ]:
+                (root / "modules/model.js").write_text(statement)
+                with (
+                    self.subTest(statement=statement),
+                    self.assertRaisesRegex(ValueError, "modules/model.js -> "),
+                ):
+                    bundle.runtime_files(root)
+            (root / "modules/model.js").write_text("import { panel } from './panel.js';")
+            (root / "modules/panel.js").write_text("export const panel = 1;")
+            manifest.write_text(json.dumps({"runtimeFiles": [*files, "modules/panel.js"]}))
+            self.assertIn("modules/panel.js", bundle.runtime_files(root))
+
     def test_unsafe_runtime_paths_are_rejected_before_packaging(self) -> None:
         with tempfile.TemporaryDirectory() as work:
             root = Path(work)
